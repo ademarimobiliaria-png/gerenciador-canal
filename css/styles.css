@@ -195,9 +195,49 @@ textarea { resize: vertical; }
   line-height: 1;
 }
 
+/* ---------- inventário e manutenção ---------- */
+.lista-tabela { display: flex; flex-direction: column; gap: 0.4rem; }
+.inv-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1.2fr 64px 110px 1.4fr auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+.manut-row {
+  display: grid;
+  grid-template-columns: 1.6fr 130px 150px 1.2fr 1.6fr auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+/* ---------- comparativo ---------- */
+.comparativo-info { margin-top: 0.5rem; }
+.baseline-ref { font-size: 0.88rem; }
+.resumo-comp { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.5rem 0; }
+.comp-tabela { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 0.5rem; }
+.comp-tabela th, .comp-tabela td { border: 1px solid var(--line); padding: 0.3rem 0.5rem; text-align: left; }
+.comp-tabela th { background: #f5f7fb; }
+.comp-tabela tr.sit-pior td { background: #fbe9e7; }
+.comp-tabela tr.sit-melhor td { background: #e8f6ed; }
+
+/* selos de condição reaproveitados na interface */
+.badge {
+  display: inline-block;
+  padding: 0.05rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  border: 1px solid #ccc;
+}
+.badge.cond-otimo { background: #e3f4e8; border-color: #2f9d55; }
+.badge.cond-bom { background: #eaf2ff; border-color: var(--brand); }
+.badge.cond-regular { background: #fff6e0; border-color: var(--warn); }
+.badge.cond-ruim { background: #fbe9e7; border-color: var(--danger); }
+.badge.cond-na { background: #f0f0f0; border-color: #999; }
+
 @media (max-width: 820px) {
   .layout { grid-template-columns: 1fr; }
   .sidebar { position: static; }
   .grid { grid-template-columns: 1fr; }
   .item-row { grid-template-columns: 1fr 1fr; }
+  .inv-row, .manut-row { grid-template-columns: 1fr 1fr; }
 }

@@ -227,6 +227,214 @@
     input.value = '';
   }
 
+  /* ---------- inventário (móveis / eletrodomésticos) ---------- */
+  function optionsCond(sel) {
+    return optionsCondicao(sel);
+  }
+
+  function renderInventario() {
+    const cont = $('#inventario-list');
+    if (!cont) return;
+    if (!estado.inventario.length) {
+      cont.innerHTML = '<p class="muted empty">Nenhum item de inventário.</p>';
+      return;
+    }
+    cont.innerHTML = estado.inventario
+      .map(
+        (it) => `
+        <div class="inv-row" data-inv="${it.id}">
+          <input type="text" value="${attr(it.descricao)}" placeholder="Descrição" data-k="descricao" class="inv-desc" />
+          <input type="text" value="${attr(it.marca)}" placeholder="Marca" data-k="marca" />
+          <input type="text" value="${attr(it.modelo)}" placeholder="Modelo" data-k="modelo" />
+          <input type="text" value="${attr(it.serie)}" placeholder="Nº de série" data-k="serie" />
+          <input type="number" min="0" step="1" value="${attr(it.qtd)}" placeholder="Qtd" data-k="qtd" class="inv-qtd" />
+          <select data-k="estado">${optionsCond(it.estado)}</select>
+          <input type="text" value="${attr(it.obs)}" placeholder="Observação" data-k="obs" />
+          <button type="button" class="btn icon del-inv" title="Remover item">✕</button>
+        </div>`
+      )
+      .join('');
+  }
+
+  function ligarInventario() {
+    const cont = $('#inventario-list');
+    const upd = (ev) => {
+      const row = ev.target.closest('[data-inv]');
+      if (!row) return;
+      const item = estado.inventario.find((i) => i.id === row.getAttribute('data-inv'));
+      if (item && ev.target.dataset.k) {
+        item[ev.target.dataset.k] = ev.target.value;
+        agendarSalvar();
+      }
+    };
+    cont.addEventListener('input', upd);
+    cont.addEventListener('change', upd);
+    cont.addEventListener('click', (ev) => {
+      if (ev.target.classList.contains('del-inv')) {
+        const row = ev.target.closest('[data-inv]');
+        estado.inventario = estado.inventario.filter((i) => i.id !== row.getAttribute('data-inv'));
+        agendarSalvar();
+        renderInventario();
+      }
+    });
+    $('#btn-add-inv').addEventListener('click', () => {
+      estado.inventario.push(V.novoInventarioItem(''));
+      agendarSalvar();
+      renderInventario();
+    });
+  }
+
+  /* ---------- manutenção e limpeza ---------- */
+  function optionsSituacao(sel) {
+    return V.SITUACOES.map(
+      (s) => `<option value="${s}"${s === sel ? ' selected' : ''}>${s}</option>`
+    ).join('');
+  }
+
+  function renderManutencao() {
+    const cont = $('#manutencao-list');
+    if (!cont) return;
+    if (!estado.manutencao.length) {
+      cont.innerHTML = '<p class="muted empty">Nenhum serviço cadastrado.</p>';
+      return;
+    }
+    cont.innerHTML = estado.manutencao
+      .map(
+        (m) => `
+        <div class="manut-row" data-manut="${m.id}">
+          <input type="text" value="${attr(m.servico)}" placeholder="Serviço" data-k="servico" class="manut-serv" />
+          <select data-k="situacao">${optionsSituacao(m.situacao)}</select>
+          <input type="date" value="${attr(m.data)}" data-k="data" />
+          <input type="text" value="${attr(m.responsavel)}" placeholder="Responsável" data-k="responsavel" />
+          <input type="text" value="${attr(m.obs)}" placeholder="Observação" data-k="obs" />
+          <button type="button" class="btn icon del-manut" title="Remover serviço">✕</button>
+        </div>`
+      )
+      .join('');
+  }
+
+  function ligarManutencao() {
+    const cont = $('#manutencao-list');
+    const upd = (ev) => {
+      const row = ev.target.closest('[data-manut]');
+      if (!row) return;
+      const item = estado.manutencao.find((i) => i.id === row.getAttribute('data-manut'));
+      if (item && ev.target.dataset.k) {
+        item[ev.target.dataset.k] = ev.target.value;
+        agendarSalvar();
+      }
+    };
+    cont.addEventListener('input', upd);
+    cont.addEventListener('change', upd);
+    cont.addEventListener('click', (ev) => {
+      if (ev.target.classList.contains('del-manut')) {
+        const row = ev.target.closest('[data-manut]');
+        estado.manutencao = estado.manutencao.filter((i) => i.id !== row.getAttribute('data-manut'));
+        agendarSalvar();
+        renderManutencao();
+      }
+    });
+    $('#btn-add-manut').addEventListener('click', () => {
+      estado.manutencao.push(V.novoManutencaoItem(''));
+      agendarSalvar();
+      renderManutencao();
+    });
+    $('#btn-manut-padrao').addEventListener('click', () => {
+      V.MANUTENCAO_PADRAO.forEach((nome) => {
+        const existe = estado.manutencao.some((m) => m.servico === nome);
+        if (!existe) estado.manutencao.push(V.novoManutencaoItem(nome));
+      });
+      agendarSalvar();
+      renderManutencao();
+    });
+  }
+
+  /* ---------- comparativo entrada × saída ---------- */
+  function renderComparativo() {
+    const info = $('#comparativo-info');
+    const btnLimpar = $('#btn-limpar-baseline');
+    if (!info) return;
+    if (!estado.baseline) {
+      info.innerHTML =
+        '<p class="muted">Nenhuma vistoria de entrada carregada para comparação.</p>';
+      if (btnLimpar) btnLimpar.hidden = true;
+      return;
+    }
+    if (btnLimpar) btnLimpar.hidden = false;
+    const b = estado.baseline;
+    const r = V.comparar(b, estado);
+    const piorou = r.mudancas.filter((m) => m.situacao === 'Piorou').length;
+    const novos = r.mudancas.filter((m) => m.situacao === 'Novo item').length;
+    const naoEnc = r.mudancas.filter((m) => m.situacao === 'Não encontrado').length;
+
+    const linhas = r.mudancas
+      .map(
+        (m) => `
+        <tr class="sit-${m.situacao === 'Piorou' ? 'pior' : m.situacao === 'Melhorou' ? 'melhor' : 'neutro'}">
+          <td>${escAttr(m.ambiente)}</td>
+          <td>${escAttr(m.item)}</td>
+          <td>${escAttr(m.de)}</td>
+          <td>${escAttr(m.para)}</td>
+          <td>${escAttr(m.situacao)}</td>
+        </tr>`
+      )
+      .join('');
+
+    info.innerHTML = `
+      <p class="baseline-ref">
+        Referência: vistoria de <strong>${escAttr(b.tipo || '—')}</strong>
+        ${b.data ? 'de ' + escAttr(b.data) : ''}
+        ${b.endereco ? '• ' + escAttr(b.endereco) : ''}
+      </p>
+      <p class="resumo-comp">
+        <span class="badge cond-bom">Mantidos: ${r.mantidos}</span>
+        <span class="badge cond-ruim">Pioraram: ${piorou}</span>
+        <span class="badge cond-regular">Novos: ${novos}</span>
+        <span class="badge cond-na">Não encontrados: ${naoEnc}</span>
+      </p>
+      ${
+        r.mudancas.length
+          ? `<table class="comp-tabela">
+              <thead><tr><th>Ambiente</th><th>Item</th><th>Entrada</th><th>Saída</th><th>Situação</th></tr></thead>
+              <tbody>${linhas}</tbody>
+             </table>`
+          : '<p class="muted">Nenhuma diferença encontrada entre entrada e saída.</p>'
+      }`;
+  }
+
+  function escAttr(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function ligarComparativo() {
+    $('#file-baseline').addEventListener('change', (ev) => {
+      const file = ev.target.files && ev.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const dados = JSON.parse(reader.result);
+          if (!dados || !Array.isArray(dados.ambientes)) throw new Error('Estrutura inválida.');
+          estado.baseline = V.prepararBaseline(dados);
+          agendarSalvar();
+          renderComparativo();
+        } catch (err) {
+          alert('Não foi possível ler a vistoria de entrada: ' + err.message);
+        }
+        ev.target.value = '';
+      };
+      reader.readAsText(file);
+    });
+    $('#btn-limpar-baseline').addEventListener('click', () => {
+      estado.baseline = null;
+      agendarSalvar();
+      renderComparativo();
+    });
+  }
+
   /* ---------- ações do topo ---------- */
   function ligarTopo() {
     $('#btn-novo').addEventListener('click', () => {
@@ -320,6 +528,9 @@
   function repintarTudo() {
     pintarCamposEstaticos();
     renderAmbientes();
+    renderInventario();
+    renderManutencao();
+    renderComparativo();
   }
 
   /* ---------- init ---------- */
@@ -328,6 +539,12 @@
     ligarCamposEstaticos();
     renderAmbientes();
     ligarAmbientes();
+    renderInventario();
+    ligarInventario();
+    renderManutencao();
+    ligarManutencao();
+    renderComparativo();
+    ligarComparativo();
     ligarTopo();
     ligarNavegacao();
   }

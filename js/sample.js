@@ -62,6 +62,41 @@
 
     e.ambientes = [sala, cozinha, quarto1, quarto2, banheiro, area, varanda];
 
+    // Inventário (imóvel semimobiliado).
+    const inv = (descricao, marca, modelo, serie, qtd, estado, obs) => {
+      const it = V.novoInventarioItem(descricao);
+      it.marca = marca || '';
+      it.modelo = modelo || '';
+      it.serie = serie || '';
+      it.qtd = qtd || '1';
+      it.estado = estado || 'Bom';
+      it.obs = obs || '';
+      return it;
+    };
+    e.inventario = [
+      inv('Fogão 4 bocas', 'Brastemp', 'BFS4NAR', 'BR-9921-7741', '1', 'Bom', 'Acende todas as bocas.'),
+      inv('Geladeira frost free', 'Electrolux', 'DF44', 'EL-5520-1180', '1', 'Ótimo', 'Borracha íntegra.'),
+      inv('Cooktop / coifa', 'Suggar', 'CF80', 'SG-3300-0091', '1', 'Bom', ''),
+      inv('Ar-condicionado split', 'LG', 'Dual Inverter 12k', 'LG-7781-4420', '1', 'Regular', 'Filtro a limpar.'),
+    ];
+
+    // Manutenção e limpeza.
+    const man = (servico, situacao, data, responsavel, obs) => {
+      const m = V.novoManutencaoItem(servico);
+      m.situacao = situacao || 'Pendente';
+      m.data = data || '';
+      m.responsavel = responsavel || '';
+      m.obs = obs || '';
+      return m;
+    };
+    e.manutencao = [
+      man('Limpeza geral', 'Realizado', '2026-06-13', 'Equipe Ademari', 'Imóvel entregue limpo.'),
+      man('Dedetização', 'Realizado', '2026-06-12', 'DedControl', 'Garantia de 6 meses.'),
+      man('Pintura', 'Realizado', '2026-06-10', 'Pinturas Silva', 'Paredes e teto.'),
+      man('Revisão hidráulica', 'Pendente', '', '', 'Revisar vedação da torneira da cozinha.'),
+      man('Revisão elétrica', 'Realizado', '2026-06-11', 'Eletro Curitiba', 'Disjuntores e tomadas OK.'),
+    ];
+
     e.textos.observacoes =
       'Imóvel entregue limpo e pintado. Lâmpadas funcionando em todos os ambientes. ' +
       'Pendência única: revisar vedação da torneira da cozinha em até 10 dias.';

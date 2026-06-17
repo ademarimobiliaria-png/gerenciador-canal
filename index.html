@@ -30,8 +30,11 @@
         <li><a href="#sec-partes">2. Partes envolvidas</a></li>
         <li><a href="#sec-medidores">3. Medidores e chaves</a></li>
         <li><a href="#sec-ambientes">4. Ambientes</a></li>
-        <li><a href="#sec-observacoes">5. Observações e termos</a></li>
-        <li><a href="#sec-assinaturas">6. Assinaturas</a></li>
+        <li><a href="#sec-inventario">5. Móveis e eletrodomésticos</a></li>
+        <li><a href="#sec-manutencao">6. Manutenção e limpeza</a></li>
+        <li><a href="#sec-comparativo">7. Comparativo entrada × saída</a></li>
+        <li><a href="#sec-observacoes">8. Observações e termos</a></li>
+        <li><a href="#sec-assinaturas">9. Assinaturas</a></li>
       </ol>
       <div class="save-hint" id="save-hint">Salvo automaticamente no navegador</div>
     </aside>
@@ -223,9 +226,51 @@
         <div id="ambientes-list" class="ambientes-list"></div>
       </section>
 
-      <!-- 5. Observações -->
+      <!-- 5. Inventário de móveis e eletrodomésticos -->
+      <section id="sec-inventario" class="card">
+        <h2>5. Móveis e eletrodomésticos</h2>
+        <p class="muted">
+          Inventário de itens do imóvel (mobiliado ou semimobiliado), com marca,
+          modelo e número de série para conferência na devolução.
+        </p>
+        <div class="template-bar">
+          <button type="button" class="btn small" id="btn-add-inv">+ adicionar item</button>
+        </div>
+        <div id="inventario-list" class="lista-tabela"></div>
+      </section>
+
+      <!-- 6. Manutenção e limpeza -->
+      <section id="sec-manutencao" class="card">
+        <h2>6. Manutenção e limpeza</h2>
+        <p class="muted">
+          Registre serviços de conservação, sua situação e responsáveis.
+        </p>
+        <div class="template-bar">
+          <button type="button" class="btn small" id="btn-add-manut">+ serviço</button>
+          <button type="button" class="btn small ghost" id="btn-manut-padrao">Carregar checklist padrão</button>
+        </div>
+        <div id="manutencao-list" class="lista-tabela"></div>
+      </section>
+
+      <!-- 7. Comparativo entrada × saída -->
+      <section id="sec-comparativo" class="card">
+        <h2>7. Comparativo entrada × saída</h2>
+        <p class="muted">
+          Carregue o JSON exportado da <strong>vistoria de entrada</strong> para
+          comparar, item a item, o que mudou nesta vistoria de saída. As fotos da
+          entrada não são armazenadas — apenas itens e condições.
+        </p>
+        <div class="template-bar">
+          <label class="btn small" for="file-baseline">Carregar vistoria de entrada (JSON)</label>
+          <input id="file-baseline" type="file" accept="application/json" hidden />
+          <button type="button" class="btn small ghost danger" id="btn-limpar-baseline" hidden>Remover referência</button>
+        </div>
+        <div id="comparativo-info" class="comparativo-info"></div>
+      </section>
+
+      <!-- 8. Observações -->
       <section id="sec-observacoes" class="card">
-        <h2>5. Observações gerais e termos</h2>
+        <h2>8. Observações gerais e termos</h2>
         <label class="field block">
           <span>Observações gerais</span>
           <textarea rows="4" data-bind="textos.observacoes"
@@ -237,9 +282,9 @@
         </label>
       </section>
 
-      <!-- 6. Assinaturas -->
+      <!-- 9. Assinaturas -->
       <section id="sec-assinaturas" class="card">
-        <h2>6. Assinaturas</h2>
+        <h2>9. Assinaturas</h2>
         <div class="grid">
           <label class="field">
             <span>Local de assinatura</span>

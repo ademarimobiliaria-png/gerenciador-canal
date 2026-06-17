@@ -18,7 +18,13 @@ Funciona inteiramente no navegador, sem servidor: todos os dados ficam no
 4. Para cada item, escolha a **condição** (Novo, Ótimo, Bom, Regular, Ruim,
    Danificado, N/A) e adicione observações. Anexe **fotos** por ambiente —
    elas são redimensionadas automaticamente antes de serem salvas.
-5. Clique em **Gerar PDF / Imprimir** no topo e escolha “Salvar como PDF”
+5. Em **5. Móveis e eletrodomésticos**, cadastre o inventário do imóvel
+   (marca, modelo, número de série, quantidade e estado).
+6. Em **6. Manutenção e limpeza**, use **Carregar checklist padrão** e
+   registre situação, data e responsável de cada serviço.
+7. Em **7. Comparativo entrada × saída**, carregue o JSON exportado da
+   vistoria de entrada para comparar item a item o que mudou.
+8. Clique em **Gerar PDF / Imprimir** no topo e escolha “Salvar como PDF”
    na caixa de impressão do navegador.
 
 Use **Carregar exemplo** para ver um caso preenchido (vistoria de entrada de
@@ -37,8 +43,17 @@ documento gerado contém:
 5. **Ambientes vistoriados** — tabela por cômodo (item, condição,
    observações) com selo colorido por condição e galeria de fotos, além de
    um resumo com a contagem de itens por condição.
-6. **Observações gerais** e **termo de responsabilidade**.
-7. **Assinaturas** do vistoriador, locador e locatário.
+6. **Móveis e eletrodomésticos** — inventário com marca, modelo, número de
+   série, quantidade e estado (aparece só quando há itens).
+7. **Manutenção e limpeza** — serviços com situação, data e responsável
+   (aparece só quando há itens).
+8. **Comparativo entrada × saída** — quando uma vistoria de entrada é
+   carregada, lista o que foi mantido, piorou, melhorou ou surgiu de novo.
+9. **Observações gerais** e **termo de responsabilidade**.
+10. **Assinaturas** do vistoriador, locador e locatário.
+
+As seções opcionais (inventário, manutenção e comparativo) só entram no PDF
+quando têm conteúdo, e a numeração se ajusta automaticamente.
 
 ## Estrutura
 
@@ -52,7 +67,8 @@ js/photos.js           Leitura e compressão (redimensionamento) das fotos
 js/templates.js        Modelos de itens por tipo de ambiente
 js/sample.js           Caso de exemplo
 js/report.js           Renderização do laudo HTML para impressão
-js/app.js              Controlador principal (formulário, ambientes, fluxo)
+js/app.js              Controlador principal (formulário, ambientes,
+                       inventário, manutenção, comparativo, fluxo)
 ```
 
 ## Exportar / importar
