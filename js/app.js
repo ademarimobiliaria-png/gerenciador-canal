@@ -1,420 +1,557 @@
-// Controlador principal do app de laudos de avaliação imobiliária.
+/* app.js — controlador principal: formulário, persistência e fluxo. */
+(function (global) {
+  'use strict';
 
-import { mean, median, stdDev, coefVar, chauvenetOutliers, confidenceInterval80 } from './statistics.js';
-import { grauFundamentacao, grauPrecisao } from './nbr14653.js';
-import { homogenizarAmostras } from './homogeneizacao.js';
-import { renderLaudo, areaAvaliando } from './laudo.js';
+  const V = global.Vistoria;
+  let estado = V.storage.carregar() || V.estadoInicial();
 
-const STORAGE_KEY = 'laudo-imobiliario-v1';
-const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const $ = (sel, ctx) => (ctx || document).querySelector(sel);
+  const $$ = (sel, ctx) => Array.prototype.slice.call((ctx || document).querySelectorAll(sel));
 
-const state = {
-  amostras: [],
-  ultimoCalculo: null
-};
-
-// ---------- Inicialização ----------
-window.addEventListener('DOMContentLoaded', () => {
-  bindToolbar();
-  bindForm();
-  bindAmostras();
-  carregarEstado();
-  if (!state.amostras.length) {
-    // Garante ao menos uma linha vazia para começar
-    addAmostra();
+  /* ---------- persistência ---------- */
+  let timerSalvar = null;
+  function agendarSalvar() {
+    clearTimeout(timerSalvar);
+    timerSalvar = setTimeout(() => {
+      const ok = V.storage.salvar(estado);
+      const hint = $('#save-hint');
+      if (hint) {
+        hint.textContent = ok
+          ? 'Salvo automaticamente no navegador'
+          : 'Não foi possível salvar (armazenamento cheio — exporte o JSON)';
+        hint.classList.toggle('warn', !ok);
+      }
+    }, 250);
   }
-  atualizarPreview();
-});
 
-// ---------- Toolbar ----------
-function bindToolbar() {
-  $('#btn-novo').addEventListener('click', () => {
-    if (!confirm('Limpar todos os dados deste laudo?')) return;
-    localStorage.removeItem(STORAGE_KEY);
-    location.reload();
-  });
+  /* ---------- campos estáticos (data-bind) ---------- */
+  function pintarCamposEstaticos() {
+    $$('[data-bind]').forEach((el) => {
+      const path = el.getAttribute('data-bind');
+      const val = V.getPath(estado, path);
+      el.value = val == null ? '' : val;
+    });
+  }
 
-  $('#btn-exemplo').addEventListener('click', () => {
-    carregarExemplo();
-    atualizarPreview();
-  });
+  function ligarCamposEstaticos() {
+    $$('[data-bind]').forEach((el) => {
+      const path = el.getAttribute('data-bind');
+      el.addEventListener('input', () => {
+        V.setPath(estado, path, el.value);
+        agendarSalvar();
+      });
+    });
+  }
 
-  $('#btn-exportar').addEventListener('click', () => {
-    const dados = coletarDados();
-    const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+  /* ---------- ambientes (dinâmicos) ---------- */
+  const listaEl = () => $('#ambientes-list');
+
+  function optionsCondicao(sel) {
+    return V.CONDICOES.map(
+      (c) => `<option value="${c}"${c === sel ? ' selected' : ''}>${c}</option>`
+    ).join('');
+  }
+
+  function renderAmbientes() {
+    const cont = listaEl();
+    if (!estado.ambientes.length) {
+      cont.innerHTML =
+        '<p class="muted empty">Nenhum ambiente ainda. Use os botões acima para começar.</p>';
+      return;
+    }
+    cont.innerHTML = estado.ambientes
+      .map((amb, idx) => {
+        const itensHtml = amb.itens
+          .map(
+            (it) => `
+          <div class="item-row" data-item="${it.id}">
+            <input type="text" class="item-nome" value="${attr(it.nome)}" placeholder="Item" data-k="nome" />
+            <select class="item-cond" data-k="condicao">${optionsCondicao(it.condicao)}</select>
+            <input type="text" class="item-obs" value="${attr(it.obs)}" placeholder="Observação" data-k="obs" />
+            <button type="button" class="btn icon del-item" title="Remover item">✕</button>
+          </div>`
+          )
+          .join('');
+
+        const fotosHtml = (amb.fotos || [])
+          .map(
+            (src, fi) => `
+          <div class="foto-thumb">
+            <img src="${src}" alt="Foto ${fi + 1}" />
+            <button type="button" class="del-foto" data-foto="${fi}" title="Remover foto">✕</button>
+          </div>`
+          )
+          .join('');
+
+        return `
+        <div class="ambiente" data-amb="${amb.id}">
+          <div class="ambiente-head">
+            <input type="text" class="amb-nome" value="${attr(amb.nome)}" placeholder="Nome do ambiente" />
+            <div class="ambiente-acoes">
+              <button type="button" class="btn small add-item">+ item</button>
+              <button type="button" class="btn small ghost mover" data-dir="-1" ${idx === 0 ? 'disabled' : ''}>↑</button>
+              <button type="button" class="btn small ghost mover" data-dir="1" ${idx === estado.ambientes.length - 1 ? 'disabled' : ''}>↓</button>
+              <button type="button" class="btn small danger del-amb">Remover</button>
+            </div>
+          </div>
+          <div class="itens">${itensHtml || '<p class="muted">Sem itens.</p>'}</div>
+          <div class="fotos-area">
+            <label class="btn small ghost foto-label">
+              + fotos
+              <input type="file" class="foto-input" accept="image/*" multiple hidden />
+            </label>
+            <div class="fotos-grid">${fotosHtml}</div>
+          </div>
+        </div>`;
+      })
+      .join('');
+  }
+
+  function attr(v) {
+    return String(v == null ? '' : v).replace(/"/g, '&quot;');
+  }
+
+  function ambientePorEl(el) {
+    const wrap = el.closest('[data-amb]');
+    if (!wrap) return null;
+    const id = wrap.getAttribute('data-amb');
+    return estado.ambientes.find((a) => a.id === id) || null;
+  }
+
+  function adicionarAmbiente(templateNome) {
+    const nome = templateNome || '';
+    const itens = templateNome ? V.templates.itensPara(templateNome) : [];
+    estado.ambientes.push(V.novoAmbiente(nome, itens));
+    agendarSalvar();
+    renderAmbientes();
+  }
+
+  /* Delegação de eventos dentro da lista de ambientes. */
+  function ligarAmbientes() {
+    const cont = listaEl();
+
+    cont.addEventListener('input', (ev) => {
+      const t = ev.target;
+      const amb = ambientePorEl(t);
+      if (!amb) return;
+
+      if (t.classList.contains('amb-nome')) {
+        amb.nome = t.value;
+        agendarSalvar();
+        return;
+      }
+      const itemRow = t.closest('[data-item]');
+      if (itemRow) {
+        const item = amb.itens.find((i) => i.id === itemRow.getAttribute('data-item'));
+        if (item && t.dataset.k) {
+          item[t.dataset.k] = t.value;
+          agendarSalvar();
+        }
+      }
+    });
+
+    cont.addEventListener('change', (ev) => {
+      const t = ev.target;
+      if (t.classList.contains('item-cond')) {
+        const amb = ambientePorEl(t);
+        const itemRow = t.closest('[data-item]');
+        if (amb && itemRow) {
+          const item = amb.itens.find((i) => i.id === itemRow.getAttribute('data-item'));
+          if (item) {
+            item.condicao = t.value;
+            agendarSalvar();
+          }
+        }
+      } else if (t.classList.contains('foto-input')) {
+        manipularFotos(t);
+      }
+    });
+
+    cont.addEventListener('click', (ev) => {
+      const t = ev.target;
+      const amb = ambientePorEl(t);
+
+      if (t.classList.contains('add-item') && amb) {
+        amb.itens.push(V.novoItem(''));
+        agendarSalvar();
+        renderAmbientes();
+      } else if (t.classList.contains('del-item') && amb) {
+        const row = t.closest('[data-item]');
+        amb.itens = amb.itens.filter((i) => i.id !== row.getAttribute('data-item'));
+        agendarSalvar();
+        renderAmbientes();
+      } else if (t.classList.contains('del-amb') && amb) {
+        if (confirm('Remover este ambiente e todos os seus itens?')) {
+          estado.ambientes = estado.ambientes.filter((a) => a.id !== amb.id);
+          agendarSalvar();
+          renderAmbientes();
+        }
+      } else if (t.classList.contains('mover') && amb) {
+        moverAmbiente(amb, parseInt(t.getAttribute('data-dir'), 10));
+      } else if (t.classList.contains('del-foto') && amb) {
+        const fi = parseInt(t.getAttribute('data-foto'), 10);
+        amb.fotos.splice(fi, 1);
+        agendarSalvar();
+        renderAmbientes();
+      }
+    });
+  }
+
+  function moverAmbiente(amb, dir) {
+    const i = estado.ambientes.indexOf(amb);
+    const j = i + dir;
+    if (j < 0 || j >= estado.ambientes.length) return;
+    const arr = estado.ambientes;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    agendarSalvar();
+    renderAmbientes();
+  }
+
+  function manipularFotos(input) {
+    const amb = ambientePorEl(input);
+    if (!amb) return;
+    const files = Array.prototype.slice.call(input.files || []);
+    if (!files.length) return;
+    Promise.all(
+      files.map((f) =>
+        V.photos.processar(f).catch((err) => {
+          console.warn('Foto ignorada:', err);
+          return null;
+        })
+      )
+    ).then((urls) => {
+      amb.fotos = amb.fotos.concat(urls.filter(Boolean));
+      agendarSalvar();
+      renderAmbientes();
+    });
+    input.value = '';
+  }
+
+  /* ---------- inventário (móveis / eletrodomésticos) ---------- */
+  function optionsCond(sel) {
+    return optionsCondicao(sel);
+  }
+
+  function renderInventario() {
+    const cont = $('#inventario-list');
+    if (!cont) return;
+    if (!estado.inventario.length) {
+      cont.innerHTML = '<p class="muted empty">Nenhum item de inventário.</p>';
+      return;
+    }
+    cont.innerHTML = estado.inventario
+      .map(
+        (it) => `
+        <div class="inv-row" data-inv="${it.id}">
+          <input type="text" value="${attr(it.descricao)}" placeholder="Descrição" data-k="descricao" class="inv-desc" />
+          <input type="text" value="${attr(it.marca)}" placeholder="Marca" data-k="marca" />
+          <input type="text" value="${attr(it.modelo)}" placeholder="Modelo" data-k="modelo" />
+          <input type="text" value="${attr(it.serie)}" placeholder="Nº de série" data-k="serie" />
+          <input type="number" min="0" step="1" value="${attr(it.qtd)}" placeholder="Qtd" data-k="qtd" class="inv-qtd" />
+          <select data-k="estado">${optionsCond(it.estado)}</select>
+          <input type="text" value="${attr(it.obs)}" placeholder="Observação" data-k="obs" />
+          <button type="button" class="btn icon del-inv" title="Remover item">✕</button>
+        </div>`
+      )
+      .join('');
+  }
+
+  function ligarInventario() {
+    const cont = $('#inventario-list');
+    const upd = (ev) => {
+      const row = ev.target.closest('[data-inv]');
+      if (!row) return;
+      const item = estado.inventario.find((i) => i.id === row.getAttribute('data-inv'));
+      if (item && ev.target.dataset.k) {
+        item[ev.target.dataset.k] = ev.target.value;
+        agendarSalvar();
+      }
+    };
+    cont.addEventListener('input', upd);
+    cont.addEventListener('change', upd);
+    cont.addEventListener('click', (ev) => {
+      if (ev.target.classList.contains('del-inv')) {
+        const row = ev.target.closest('[data-inv]');
+        estado.inventario = estado.inventario.filter((i) => i.id !== row.getAttribute('data-inv'));
+        agendarSalvar();
+        renderInventario();
+      }
+    });
+    $('#btn-add-inv').addEventListener('click', () => {
+      estado.inventario.push(V.novoInventarioItem(''));
+      agendarSalvar();
+      renderInventario();
+    });
+  }
+
+  /* ---------- manutenção e limpeza ---------- */
+  function optionsSituacao(sel) {
+    return V.SITUACOES.map(
+      (s) => `<option value="${s}"${s === sel ? ' selected' : ''}>${s}</option>`
+    ).join('');
+  }
+
+  function renderManutencao() {
+    const cont = $('#manutencao-list');
+    if (!cont) return;
+    if (!estado.manutencao.length) {
+      cont.innerHTML = '<p class="muted empty">Nenhum serviço cadastrado.</p>';
+      return;
+    }
+    cont.innerHTML = estado.manutencao
+      .map(
+        (m) => `
+        <div class="manut-row" data-manut="${m.id}">
+          <input type="text" value="${attr(m.servico)}" placeholder="Serviço" data-k="servico" class="manut-serv" />
+          <select data-k="situacao">${optionsSituacao(m.situacao)}</select>
+          <input type="date" value="${attr(m.data)}" data-k="data" />
+          <input type="text" value="${attr(m.responsavel)}" placeholder="Responsável" data-k="responsavel" />
+          <input type="text" value="${attr(m.obs)}" placeholder="Observação" data-k="obs" />
+          <button type="button" class="btn icon del-manut" title="Remover serviço">✕</button>
+        </div>`
+      )
+      .join('');
+  }
+
+  function ligarManutencao() {
+    const cont = $('#manutencao-list');
+    const upd = (ev) => {
+      const row = ev.target.closest('[data-manut]');
+      if (!row) return;
+      const item = estado.manutencao.find((i) => i.id === row.getAttribute('data-manut'));
+      if (item && ev.target.dataset.k) {
+        item[ev.target.dataset.k] = ev.target.value;
+        agendarSalvar();
+      }
+    };
+    cont.addEventListener('input', upd);
+    cont.addEventListener('change', upd);
+    cont.addEventListener('click', (ev) => {
+      if (ev.target.classList.contains('del-manut')) {
+        const row = ev.target.closest('[data-manut]');
+        estado.manutencao = estado.manutencao.filter((i) => i.id !== row.getAttribute('data-manut'));
+        agendarSalvar();
+        renderManutencao();
+      }
+    });
+    $('#btn-add-manut').addEventListener('click', () => {
+      estado.manutencao.push(V.novoManutencaoItem(''));
+      agendarSalvar();
+      renderManutencao();
+    });
+    $('#btn-manut-padrao').addEventListener('click', () => {
+      V.MANUTENCAO_PADRAO.forEach((nome) => {
+        const existe = estado.manutencao.some((m) => m.servico === nome);
+        if (!existe) estado.manutencao.push(V.novoManutencaoItem(nome));
+      });
+      agendarSalvar();
+      renderManutencao();
+    });
+  }
+
+  /* ---------- comparativo entrada × saída ---------- */
+  function renderComparativo() {
+    const info = $('#comparativo-info');
+    const btnLimpar = $('#btn-limpar-baseline');
+    if (!info) return;
+    if (!estado.baseline) {
+      info.innerHTML =
+        '<p class="muted">Nenhuma vistoria de entrada carregada para comparação.</p>';
+      if (btnLimpar) btnLimpar.hidden = true;
+      return;
+    }
+    if (btnLimpar) btnLimpar.hidden = false;
+    const b = estado.baseline;
+    const r = V.comparar(b, estado);
+    const piorou = r.mudancas.filter((m) => m.situacao === 'Piorou').length;
+    const novos = r.mudancas.filter((m) => m.situacao === 'Novo item').length;
+    const naoEnc = r.mudancas.filter((m) => m.situacao === 'Não encontrado').length;
+
+    const linhas = r.mudancas
+      .map(
+        (m) => `
+        <tr class="sit-${m.situacao === 'Piorou' ? 'pior' : m.situacao === 'Melhorou' ? 'melhor' : 'neutro'}">
+          <td>${escAttr(m.ambiente)}</td>
+          <td>${escAttr(m.item)}</td>
+          <td>${escAttr(m.de)}</td>
+          <td>${escAttr(m.para)}</td>
+          <td>${escAttr(m.situacao)}</td>
+        </tr>`
+      )
+      .join('');
+
+    info.innerHTML = `
+      <p class="baseline-ref">
+        Referência: vistoria de <strong>${escAttr(b.tipo || '—')}</strong>
+        ${b.data ? 'de ' + escAttr(b.data) : ''}
+        ${b.endereco ? '• ' + escAttr(b.endereco) : ''}
+      </p>
+      <p class="resumo-comp">
+        <span class="badge cond-bom">Mantidos: ${r.mantidos}</span>
+        <span class="badge cond-ruim">Pioraram: ${piorou}</span>
+        <span class="badge cond-regular">Novos: ${novos}</span>
+        <span class="badge cond-na">Não encontrados: ${naoEnc}</span>
+      </p>
+      ${
+        r.mudancas.length
+          ? `<table class="comp-tabela">
+              <thead><tr><th>Ambiente</th><th>Item</th><th>Entrada</th><th>Saída</th><th>Situação</th></tr></thead>
+              <tbody>${linhas}</tbody>
+             </table>`
+          : '<p class="muted">Nenhuma diferença encontrada entre entrada e saída.</p>'
+      }`;
+  }
+
+  function escAttr(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function ligarComparativo() {
+    $('#file-baseline').addEventListener('change', (ev) => {
+      const file = ev.target.files && ev.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const dados = JSON.parse(reader.result);
+          if (!dados || !Array.isArray(dados.ambientes)) throw new Error('Estrutura inválida.');
+          estado.baseline = V.prepararBaseline(dados);
+          agendarSalvar();
+          renderComparativo();
+        } catch (err) {
+          alert('Não foi possível ler a vistoria de entrada: ' + err.message);
+        }
+        ev.target.value = '';
+      };
+      reader.readAsText(file);
+    });
+    $('#btn-limpar-baseline').addEventListener('click', () => {
+      estado.baseline = null;
+      agendarSalvar();
+      renderComparativo();
+    });
+  }
+
+  /* ---------- ações do topo ---------- */
+  function ligarTopo() {
+    $('#btn-novo').addEventListener('click', () => {
+      if (confirm('Iniciar uma nova vistoria em branco? Os dados atuais serão apagados.')) {
+        estado = V.estadoInicial();
+        V.storage.salvar(estado);
+        repintarTudo();
+      }
+    });
+
+    $('#btn-exemplo').addEventListener('click', () => {
+      estado = V.sample.carregarExemplo();
+      V.storage.salvar(estado);
+      repintarTudo();
+    });
+
+    $('#btn-exportar').addEventListener('click', exportarJSON);
+    $('#file-importar').addEventListener('change', importarJSON);
+    $('#btn-imprimir').addEventListener('click', imprimir);
+
+    $$('[data-template]').forEach((btn) => {
+      btn.addEventListener('click', () => adicionarAmbiente(btn.getAttribute('data-template')));
+    });
+  }
+
+  function exportarJSON() {
+    const blob = new Blob([JSON.stringify(estado, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    const nome = (dados.solicitante?.nome || 'laudo').replace(/[^\w-]+/g, '_');
-    a.download = `laudo-${nome}.json`;
+    const nome = (estado.imovel.endereco || 'vistoria')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 40);
+    a.href = url;
+    a.download = `vistoria-${nome || 'imovel'}.json`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(a.href);
-  });
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 
-  $('#file-importar').addEventListener('change', async (e) => {
-    const file = e.target.files?.[0];
+  function importarJSON(ev) {
+    const file = ev.target.files && ev.target.files[0];
     if (!file) return;
-    try {
-      const text = await file.text();
-      const dados = JSON.parse(text);
-      aplicarDados(dados);
-      atualizarPreview();
-    } catch (err) {
-      alert('Arquivo inválido: ' + err.message);
-    } finally {
-      e.target.value = '';
-    }
-  });
-
-  $('#btn-imprimir').addEventListener('click', () => {
-    // Antes de imprimir, força recalcular silenciosamente para garantir que o
-    // laudo impresso reflita exatamente o que está no formulário.
-    const dados = coletarDados();
-    const calculo = calcular(dados, { silent: true });
-    if (calculo) state.ultimoCalculo = calculo;
-    atualizarPreview();
-    requestAnimationFrame(() => window.print());
-  });
-
-  $('#btn-calcular').addEventListener('click', () => {
-    const dados = coletarDados();
-    state.ultimoCalculo = calcular(dados);
-    if (state.ultimoCalculo) mostrarResultado(state.ultimoCalculo, dados);
-    salvarEstado();
-    atualizarPreview();
-  });
-
-  $('#btn-atualizar-preview').addEventListener('click', () => atualizarPreview());
-
-  // Navegação lateral
-  $$('.sidebar a').forEach(a => {
-    a.addEventListener('click', () => {
-      $$('.sidebar a').forEach(x => x.classList.remove('active'));
-      a.classList.add('active');
-    });
-  });
-}
-
-// ---------- Form ----------
-function bindForm() {
-  document.addEventListener('input', (e) => {
-    if (e.target.matches('input, select, textarea')) {
-      salvarEstado();
-    }
-  });
-}
-
-function getValueByPath(root, path) {
-  return path.split('.').reduce((acc, key) => (acc ? acc[key] : undefined), root);
-}
-
-function setValueByPath(root, path, value) {
-  const keys = path.split('.');
-  const last = keys.pop();
-  let cur = root;
-  for (const k of keys) {
-    if (cur[k] == null || typeof cur[k] !== 'object') cur[k] = {};
-    cur = cur[k];
-  }
-  cur[last] = value;
-}
-
-function coletarDados() {
-  const dados = {};
-  $$('input[name], select[name], textarea[name]').forEach(el => {
-    if (el.closest('#tbl-amostra')) return;
-    let v = el.value;
-    if (el.type === 'number') v = el.value === '' ? '' : Number(el.value);
-    if (el.type === 'checkbox') v = el.checked;
-    setValueByPath(dados, el.name, v);
-  });
-
-  // Renomeia notas do avaliando (aval.nota.xxx -> avaliando.notaXxx) para
-  // ficar mais natural ao homogeneizar.
-  const aval = {
-    area: areaAvaliando({ ...dados }),
-    idade: Number(dados.vistoria?.idade) || 0,
-    notaLocalizacao: dados.aval?.nota?.localizacao,
-    notaPadrao: dados.aval?.nota?.padrao,
-    notaConservacao: dados.aval?.nota?.conservacao,
-    notaTransposicao: dados.aval?.nota?.transposicao
-  };
-  dados.avaliando = aval;
-
-  dados.amostras = coletarAmostras();
-  return dados;
-}
-
-function aplicarDados(dados) {
-  $$('input[name], select[name], textarea[name]').forEach(el => {
-    if (el.closest('#tbl-amostra')) return;
-    const v = getValueByPath(dados, el.name);
-    if (v === undefined || v === null) return;
-    if (el.type === 'checkbox') el.checked = !!v;
-    else el.value = v;
-  });
-
-  // Amostras
-  $('#tbl-amostra tbody').innerHTML = '';
-  state.amostras = [];
-  (dados.amostras || []).forEach(a => addAmostra(a));
-  reindexarAmostras();
-}
-
-// ---------- Amostras ----------
-function bindAmostras() {
-  $('#btn-add-amostra').addEventListener('click', () => addAmostra());
-  $('#tbl-amostra').addEventListener('click', (e) => {
-    if (e.target.closest('.btn-remove')) {
-      const tr = e.target.closest('tr');
-      tr.remove();
-      reindexarAmostras();
-      salvarEstado();
-    }
-  });
-  $('#tbl-amostra').addEventListener('input', () => salvarEstado());
-}
-
-function addAmostra(dados = {}) {
-  const tpl = $('#tpl-amostra-row');
-  const tr = tpl.content.firstElementChild.cloneNode(true);
-  $('#tbl-amostra tbody').appendChild(tr);
-
-  Object.entries(dados).forEach(([k, v]) => {
-    const el = tr.querySelector(`[data-k="${k}"]`);
-    if (!el) return;
-    if (el.type === 'checkbox') el.checked = !!v;
-    else el.value = v ?? '';
-  });
-  reindexarAmostras();
-}
-
-function reindexarAmostras() {
-  $$('#tbl-amostra tbody tr').forEach((tr, i) => {
-    tr.querySelector('.idx').textContent = i + 1;
-  });
-}
-
-function coletarAmostras() {
-  return $$('#tbl-amostra tbody tr').map(tr => {
-    const obj = {};
-    tr.querySelectorAll('[data-k]').forEach(el => {
-      let v = el.value;
-      if (el.type === 'number') v = el.value === '' ? '' : Number(el.value);
-      if (el.type === 'checkbox') v = el.checked;
-      obj[el.dataset.k] = v;
-    });
-    return obj;
-  });
-}
-
-// ---------- Cálculo ----------
-function calcular(dados, opts = {}) {
-  const silent = !!opts.silent;
-  if (!dados.amostras?.length) {
-    if (!silent) alert('Inclua pelo menos uma amostra de mercado.');
-    return null;
-  }
-  if (!dados.avaliando.area) {
-    if (!silent) alert('Informe a área do imóvel avaliando coerente com a variável de comparação.');
-    return null;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const dados = JSON.parse(reader.result);
+        if (!dados || typeof dados !== 'object' || !Array.isArray(dados.ambientes)) {
+          throw new Error('Estrutura inválida.');
+        }
+        estado = Object.assign(V.estadoInicial(), dados);
+        V.storage.salvar(estado);
+        repintarTudo();
+      } catch (err) {
+        alert('Não foi possível importar este arquivo: ' + err.message);
+      }
+      ev.target.value = '';
+    };
+    reader.readAsText(file);
   }
 
-  const fatores = {
-    oferta: dados.fator?.oferta,
-    areaN: dados.fator?.areaN,
-    depreciacaoAnual: dados.fator?.depreciacaoAnual,
-    localizacao: dados.fator?.localizacao,
-    padrao: dados.fator?.padrao,
-    conservacao: dados.fator?.conservacao,
-    transposicao: dados.fator?.transposicao
-  };
-
-  const homogeneizadas = homogenizarAmostras({
-    amostras: dados.amostras,
-    avaliando: dados.avaliando,
-    fatores,
-    variavel: dados.metodo?.variavel
-  });
-
-  const valoresHom = homogeneizadas.map(h => h.vuHom).filter(v => Number.isFinite(v) && v > 0);
-
-  // Saneamento por Chauvenet
-  const sanea = chauvenetOutliers(valoresHom);
-  const valoresKept = sanea.kept;
-
-  // Marca outliers nos itens
-  if (sanea.removed.length) {
-    const removidosIdx = new Set(sanea.removed.map(r => r.index));
-    homogeneizadas.forEach((h, i) => { h.ehOutlier = removidosIdx.has(i); });
+  function imprimir() {
+    $('#laudo').innerHTML = V.report.render(estado);
+    window.print();
   }
 
-  const m = mean(valoresKept);
-  const med = median(valoresKept);
-  const s = stdDev(valoresKept);
-  const cv = coefVar(valoresKept);
-  const ic = confidenceInterval80(valoresKept);
-
-  const grauFund = grauFundamentacao({ nEfetivo: valoresKept.length, amplitude: ic.amplitude });
-  const grauPrec = grauPrecisao(ic.amplitude);
-
-  const valorUnit = m;
-  const valorTotal = valorUnit * (dados.avaliando.area || 0);
-
-  return {
-    homogeneizadas,
-    removidos: sanea.removed,
-    nEfetivo: valoresKept.length,
-    media: m,
-    mediana: med,
-    desvio: s,
-    cv,
-    icInf: ic.lower,
-    icSup: ic.upper,
-    amplitude: ic.amplitude,
-    valorUnitario: valorUnit,
-    valorTotal,
-    grauFundamentacao: grauFund,
-    grauPrecisao: grauPrec
-  };
-}
-
-// ---------- UI Resultado ----------
-const BRL = v => Number.isFinite(v) ? v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—';
-const NUM = (v, d = 2) => Number.isFinite(v) ? v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—';
-const PCT = v => Number.isFinite(v) ? v.toLocaleString('pt-BR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 2 }) : '—';
-
-function mostrarResultado(r, dados) {
-  if (!r) return;
-  $('#resultado-vazio').classList.add('hidden');
-  $('#resultado').classList.remove('hidden');
-  $('#kpi-media').textContent = BRL(r.media);
-  $('#kpi-mediana').textContent = BRL(r.mediana);
-  $('#kpi-desvio').textContent = BRL(r.desvio);
-  $('#kpi-cv').textContent = PCT(r.cv);
-  $('#kpi-ic-inf').textContent = BRL(r.icInf);
-  $('#kpi-ic-sup').textContent = BRL(r.icSup);
-  $('#kpi-ic-amp').textContent = PCT(r.amplitude);
-  $('#kpi-outliers').textContent = r.removidos.length;
-  $('#kpi-n').textContent = r.nEfetivo;
-  $('#kpi-valor-unit').textContent = BRL(r.valorUnitario) + ' / m²';
-  $('#kpi-valor-total').textContent = BRL(r.valorTotal);
-  $('#kpi-grau-fund').textContent = r.grauFundamentacao.grau;
-  $('#kpi-grau-prec').textContent = r.grauPrecisao.grau;
-  $('#grau-detalhe').innerHTML = `
-    Fundamentação: ${r.grauFundamentacao.motivo}.<br />
-    Precisão: ${r.grauPrecisao.motivo}.
-  `;
-}
-
-// ---------- Preview / Impressão ----------
-function atualizarPreview() {
-  const dados = coletarDados();
-  const calculo = calcular(dados, { silent: true }) || state.ultimoCalculo;
-  const html = renderLaudo({ dados, calculo });
-  $('#preview').innerHTML = html;
-  $('#laudo-print').innerHTML = html;
-}
-
-// ---------- Persistência ----------
-function salvarEstado() {
-  const dados = coletarDados();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
-}
-
-function carregarEstado() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return;
-  try {
-    aplicarDados(JSON.parse(raw));
-  } catch {
-    /* ignora storage corrompido */
+  /* ---------- navegação lateral ---------- */
+  function ligarNavegacao() {
+    const links = $$('.steps a');
+    const secoes = links
+      .map((a) => document.querySelector(a.getAttribute('href')))
+      .filter(Boolean);
+    if (!('IntersectionObserver' in window) || !secoes.length) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const id = '#' + entry.target.id;
+            links.forEach((a) => a.classList.toggle('active', a.getAttribute('href') === id));
+          }
+        });
+      },
+      { rootMargin: '-40% 0px -55% 0px' }
+    );
+    secoes.forEach((s) => obs.observe(s));
   }
-}
 
-// ---------- Exemplo ----------
-function carregarExemplo() {
-  const hoje = new Date().toISOString().slice(0, 10);
-  const exemplo = {
-    solicitante: {
-      nome: 'João da Silva',
-      documento: '123.456.789-00',
-      endereco: 'Rua das Acácias, 123 — Centro — Curitiba/PR'
-    },
-    laudo: {
-      finalidade: 'Garantia de financiamento bancário',
-      objetivo: 'Valor de mercado para venda',
-      pressupostos: 'A avaliação considera o imóvel livre e desembaraçado de quaisquer ônus, gravames, ações ou pendências, em condições normais de mercado, à data de referência indicada.',
-      dataReferencia: hoje,
-      localData: 'Curitiba, ' + new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
-    },
-    imovel: {
-      tipo: 'Apartamento',
-      matricula: '12345 — 1º Ofício de Registro de Imóveis de Curitiba',
-      endereco: 'Rua Marechal Deodoro, 1000 — Apto. 902',
-      bairro: 'Centro',
-      cidade: 'Curitiba/PR',
-      areaTerreno: 0,
-      areaConstruida: 85,
-      areaPrivativa: 72,
-      fracaoIdeal: '0,012345'
-    },
-    vistoria: {
-      data: hoje,
-      padrao: 'Normal/Médio',
-      idade: 8,
-      conservacao: 'c',
-      dormitorios: 3,
-      suites: 1,
-      banheiros: 2,
-      vagas: 1,
-      andar: '9º',
-      face: 'Norte',
-      acabamentos: 'Piso laminado nos quartos e sala; porcelanato nas áreas molhadas; pintura látex; esquadrias de alumínio; instalações em bom estado.',
-      lazer: 'Portaria 24h, salão de festas, piscina, academia, playground e churrasqueira coletiva.',
-      equipamentos: 'Energia elétrica, água tratada, esgoto sanitário, pavimentação asfáltica, coleta de lixo, iluminação pública e transporte coletivo.'
-    },
-    mercado: {
-      liquidez: 'Média',
-      comportamento: 'Estável',
-      ofertaDemanda: 'Equilíbrio',
-      tendencia: 'Estabilidade',
-      comentario: 'A região central de Curitiba apresenta liquidez média, com oferta diversificada de apartamentos de 2 e 3 dormitórios em prédios das décadas de 2000-2020.'
-    },
-    metodo: {
-      tipo: 'MCDDM-Fatores',
-      variavel: 'privativa'
-    },
-    fator: {
-      oferta: 0.90,
-      areaN: 0.25,
-      depreciacaoAnual: 1.0,
-      localizacao: 0.05,
-      padrao: 0.05,
-      conservacao: 0.04,
-      transposicao: 0.03
-    },
-    aval: {
-      nota: { localizacao: 7, padrao: 7, conservacao: 8, transposicao: 7 }
-    },
-    responsavel: {
-      nome: 'Maria Oliveira',
-      formacao: 'Engenheira Civil',
-      registro: 'CREA-PR 123456 / IBAPE',
-      cpf: '987.654.321-00',
-      contato: 'Rua XV de Novembro, 500, sala 12 — Curitiba/PR — (41) 99999-0000'
-    },
-    amostras: [
-      { endereco: 'Rua Cândido Lopes, 200 — Apto. 501', fonte: 'Portal imobiliário', tipo: 'Apartamento', area: 70, preco: 620000, oferta: true,  notaLocalizacao: 7, notaPadrao: 7, notaConservacao: 7, idade: 10, notaTransposicao: 7 },
-      { endereco: 'Av. Sete de Setembro, 1500 — Apto. 1002', fonte: 'Imobiliária', tipo: 'Apartamento', area: 78, preco: 690000, oferta: true,  notaLocalizacao: 7, notaPadrao: 8, notaConservacao: 7, idade: 6, notaTransposicao: 7 },
-      { endereco: 'Rua Voluntários da Pátria, 300 — Apto. 702', fonte: 'Corretor', tipo: 'Apartamento', area: 68, preco: 580000, oferta: true,  notaLocalizacao: 6, notaPadrao: 6, notaConservacao: 7, idade: 12, notaTransposicao: 7 },
-      { endereco: 'Rua Marechal Deodoro, 850 — Apto. 401', fonte: 'Portal imobiliário', tipo: 'Apartamento', area: 80, preco: 720000, oferta: true,  notaLocalizacao: 8, notaPadrao: 7, notaConservacao: 8, idade: 5, notaTransposicao: 7 },
-      { endereco: 'Rua Visconde de Nácar, 220 — Apto. 1101', fonte: 'Cartório / ITBI', tipo: 'Apartamento', area: 75, preco: 660000, oferta: false, notaLocalizacao: 7, notaPadrao: 7, notaConservacao: 8, idade: 7, notaTransposicao: 7 },
-      { endereco: 'Rua Emiliano Perneta, 100 — Apto. 803', fonte: 'Imobiliária', tipo: 'Apartamento', area: 73, preco: 640000, oferta: true,  notaLocalizacao: 7, notaPadrao: 7, notaConservacao: 7, idade: 9, notaTransposicao: 7 }
-    ]
-  };
-  aplicarDados(exemplo);
-  salvarEstado();
-  // Calcula automaticamente
-  $('#btn-calcular').click();
-}
+  /* ---------- repintura completa ---------- */
+  function repintarTudo() {
+    pintarCamposEstaticos();
+    renderAmbientes();
+    renderInventario();
+    renderManutencao();
+    renderComparativo();
+  }
+
+  /* ---------- init ---------- */
+  function init() {
+    pintarCamposEstaticos();
+    ligarCamposEstaticos();
+    renderAmbientes();
+    ligarAmbientes();
+    renderInventario();
+    ligarInventario();
+    renderManutencao();
+    ligarManutencao();
+    renderComparativo();
+    ligarComparativo();
+    ligarTopo();
+    ligarNavegacao();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})(window);

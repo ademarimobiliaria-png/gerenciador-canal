@@ -3,422 +3,315 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Laudo de Avaliação Imobiliária — ABNT NBR 14653</title>
+  <title>Vistoria de Imóveis</title>
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/print.css" media="print" />
 </head>
 <body>
   <header class="topbar no-print">
     <div class="brand">
-      <h1>Laudo de Avaliação Imobiliária</h1>
-      <span class="subtitle">Conforme ABNT NBR 14653-1 e 14653-2</span>
+      <h1>Vistoria de Imóveis</h1>
+      <span class="subtitle">Laudo de vistoria de entrada, saída e periódica</span>
     </div>
     <nav class="actions">
-      <button id="btn-novo" class="btn ghost">Novo</button>
-      <button id="btn-exemplo" class="btn ghost">Carregar exemplo</button>
-      <button id="btn-exportar" class="btn ghost">Exportar JSON</button>
+      <button id="btn-novo" class="btn ghost" type="button">Novo</button>
+      <button id="btn-exemplo" class="btn ghost" type="button">Carregar exemplo</button>
+      <button id="btn-exportar" class="btn ghost" type="button">Exportar JSON</button>
       <label class="btn ghost" for="file-importar">Importar JSON</label>
       <input id="file-importar" type="file" accept="application/json" hidden />
-      <button id="btn-imprimir" class="btn primary">Gerar PDF / Imprimir</button>
+      <button id="btn-imprimir" class="btn primary" type="button">Gerar PDF / Imprimir</button>
     </nav>
   </header>
 
   <main class="layout no-print">
     <aside class="sidebar">
       <ol class="steps">
-        <li><a href="#sec-solicitante" class="active">1. Solicitante e finalidade</a></li>
-        <li><a href="#sec-imovel">2. Identificação do imóvel</a></li>
-        <li><a href="#sec-vistoria">3. Vistoria e caracterização</a></li>
-        <li><a href="#sec-mercado">4. Diagnóstico de mercado</a></li>
-        <li><a href="#sec-metodo">5. Método e amostra</a></li>
-        <li><a href="#sec-homogeneizacao">6. Homogeneização</a></li>
-        <li><a href="#sec-resultado">7. Resultado e especificação</a></li>
-        <li><a href="#sec-responsavel">8. Responsável técnico</a></li>
-        <li><a href="#sec-preview">9. Preview do laudo</a></li>
+        <li><a href="#sec-vistoria" class="active">1. Dados da vistoria</a></li>
+        <li><a href="#sec-partes">2. Partes envolvidas</a></li>
+        <li><a href="#sec-medidores">3. Medidores e chaves</a></li>
+        <li><a href="#sec-ambientes">4. Ambientes</a></li>
+        <li><a href="#sec-inventario">5. Móveis e eletrodomésticos</a></li>
+        <li><a href="#sec-manutencao">6. Manutenção e limpeza</a></li>
+        <li><a href="#sec-comparativo">7. Comparativo entrada × saída</a></li>
+        <li><a href="#sec-observacoes">8. Observações e termos</a></li>
+        <li><a href="#sec-assinaturas">9. Assinaturas</a></li>
       </ol>
+      <div class="save-hint" id="save-hint">Salvo automaticamente no navegador</div>
     </aside>
 
-    <section class="content">
-      <!-- 1. SOLICITANTE -->
-      <fieldset id="sec-solicitante" class="card">
-        <legend>1. Solicitante e finalidade</legend>
-        <div class="grid grid-2">
-          <label>Nome / Razão social
-            <input type="text" name="solicitante.nome" />
+    <form id="form" class="form" autocomplete="off">
+      <!-- 1. Dados da vistoria -->
+      <section id="sec-vistoria" class="card">
+        <h2>1. Dados da vistoria</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Tipo de vistoria</span>
+            <select data-bind="vistoria.tipo">
+              <option value="Entrada">Entrada</option>
+              <option value="Saída">Saída</option>
+              <option value="Periódica">Periódica</option>
+              <option value="Conferência">Conferência</option>
+            </select>
           </label>
-          <label>CPF / CNPJ
-            <input type="text" name="solicitante.documento" />
+          <label class="field">
+            <span>Data da vistoria</span>
+            <input type="date" data-bind="vistoria.data" />
           </label>
-          <label class="col-2">Endereço do solicitante
-            <input type="text" name="solicitante.endereco" />
+          <label class="field">
+            <span>Nº / Código do contrato</span>
+            <input type="text" data-bind="vistoria.contrato" placeholder="Ex.: LOC-2026-018" />
           </label>
-          <label>Finalidade do laudo
-            <select name="laudo.finalidade">
-              <option value="Garantia de financiamento bancário">Garantia de financiamento bancário</option>
+          <label class="field">
+            <span>Finalidade</span>
+            <select data-bind="vistoria.finalidade">
+              <option value="Locação residencial">Locação residencial</option>
+              <option value="Locação comercial">Locação comercial</option>
               <option value="Compra e venda">Compra e venda</option>
-              <option value="Partilha de bens">Partilha de bens</option>
-              <option value="Inventário">Inventário</option>
-              <option value="Aluguel / locação">Aluguel / locação</option>
-              <option value="Garantia hipotecária">Garantia hipotecária</option>
-              <option value="Judicial">Judicial</option>
-              <option value="Contábil / IRPF">Contábil / IRPF</option>
-              <option value="Desapropriação">Desapropriação</option>
               <option value="Outra">Outra</option>
             </select>
           </label>
-          <label>Objetivo da avaliação
-            <select name="laudo.objetivo">
-              <option value="Valor de mercado para venda">Valor de mercado para venda</option>
-              <option value="Valor de mercado para locação">Valor de mercado para locação</option>
-              <option value="Valor de liquidação forçada">Valor de liquidação forçada</option>
-              <option value="Valor patrimonial">Valor patrimonial</option>
-            </select>
-          </label>
-          <label class="col-2">Pressupostos, ressalvas e fatores limitantes
-            <textarea rows="3" name="laudo.pressupostos">A avaliação considera o imóvel livre e desembaraçado de quaisquer ônus, gravames, ações ou pendências, em condições normais de mercado, à data de referência indicada.</textarea>
-          </label>
         </div>
-      </fieldset>
 
-      <!-- 2. IMÓVEL -->
-      <fieldset id="sec-imovel" class="card">
-        <legend>2. Identificação do imóvel avaliando</legend>
-        <div class="grid grid-2">
-          <label>Tipo
-            <select name="imovel.tipo">
+        <h3>Imóvel</h3>
+        <div class="grid">
+          <label class="field">
+            <span>Tipo de imóvel</span>
+            <select data-bind="imovel.tipo">
               <option value="Apartamento">Apartamento</option>
               <option value="Casa">Casa</option>
-              <option value="Terreno urbano">Terreno urbano</option>
               <option value="Sala comercial">Sala comercial</option>
               <option value="Loja">Loja</option>
               <option value="Galpão">Galpão</option>
-              <option value="Cobertura">Cobertura</option>
-              <option value="Sobrado">Sobrado</option>
+              <option value="Terreno">Terreno</option>
+              <option value="Outro">Outro</option>
             </select>
           </label>
-          <label>Matrícula / Registro
-            <input type="text" name="imovel.matricula" />
+          <label class="field">
+            <span>Estado de ocupação</span>
+            <select data-bind="imovel.ocupacao">
+              <option value="Desocupado">Desocupado</option>
+              <option value="Mobiliado">Mobiliado</option>
+              <option value="Semimobiliado">Semimobiliado</option>
+              <option value="Ocupado">Ocupado</option>
+            </select>
           </label>
-          <label class="col-2">Endereço completo
-            <input type="text" name="imovel.endereco" />
+          <label class="field wide">
+            <span>Endereço</span>
+            <input type="text" data-bind="imovel.endereco" placeholder="Rua, número, complemento" />
           </label>
-          <label>Bairro
-            <input type="text" name="imovel.bairro" />
+          <label class="field">
+            <span>Bairro</span>
+            <input type="text" data-bind="imovel.bairro" />
           </label>
-          <label>Cidade / UF
-            <input type="text" name="imovel.cidade" />
+          <label class="field">
+            <span>Cidade / UF</span>
+            <input type="text" data-bind="imovel.cidade" placeholder="Curitiba / PR" />
           </label>
-          <label>Área do terreno (m²)
-            <input type="number" step="0.01" name="imovel.areaTerreno" />
+          <label class="field">
+            <span>CEP</span>
+            <input type="text" data-bind="imovel.cep" />
           </label>
-          <label>Área construída (m²)
-            <input type="number" step="0.01" name="imovel.areaConstruida" />
-          </label>
-          <label>Área privativa / útil (m²)
-            <input type="number" step="0.01" name="imovel.areaPrivativa" />
-          </label>
-          <label>Fração ideal
-            <input type="text" name="imovel.fracaoIdeal" placeholder="ex.: 0,012345" />
+          <label class="field">
+            <span>Área (m²)</span>
+            <input type="number" step="0.01" min="0" data-bind="imovel.area" />
           </label>
         </div>
-      </fieldset>
+      </section>
 
-      <!-- 3. VISTORIA -->
-      <fieldset id="sec-vistoria" class="card">
-        <legend>3. Vistoria e caracterização (NBR 14653-2)</legend>
-        <div class="grid grid-2">
-          <label>Data da vistoria
-            <input type="date" name="vistoria.data" />
+      <!-- 2. Partes -->
+      <section id="sec-partes" class="card">
+        <h2>2. Partes envolvidas</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Locador / Proprietário</span>
+            <input type="text" data-bind="partes.locador" />
           </label>
-          <label>Padrão construtivo
-            <select name="vistoria.padrao">
-              <option value="Mínimo">Mínimo</option>
-              <option value="Baixo">Baixo</option>
-              <option value="Normal/Médio">Normal/Médio</option>
-              <option value="Alto">Alto</option>
-              <option value="Luxo">Luxo</option>
-            </select>
+          <label class="field">
+            <span>Locatário / Inquilino</span>
+            <input type="text" data-bind="partes.locatario" />
           </label>
-          <label>Idade aparente (anos)
-            <input type="number" step="1" name="vistoria.idade" />
+          <label class="field">
+            <span>Imobiliária / Administradora</span>
+            <input type="text" data-bind="partes.imobiliaria" />
           </label>
-          <label>Estado de conservação (Heidecke)
-            <select name="vistoria.conservacao">
-              <option value="a">a — Novo</option>
-              <option value="b">b — Entre novo e regular</option>
-              <option value="c" selected>c — Regular</option>
-              <option value="d">d — Entre regular e reparos simples</option>
-              <option value="e">e — Reparos simples</option>
-              <option value="f">f — Reparos importantes</option>
-              <option value="g">g — Sem valor</option>
-            </select>
+          <label class="field">
+            <span>Vistoriador responsável</span>
+            <input type="text" data-bind="partes.vistoriador" />
           </label>
-          <label>Dormitórios <input type="number" name="vistoria.dormitorios" /></label>
-          <label>Suítes <input type="number" name="vistoria.suites" /></label>
-          <label>Banheiros <input type="number" name="vistoria.banheiros" /></label>
-          <label>Vagas de garagem <input type="number" name="vistoria.vagas" /></label>
-          <label>Andar / pavimento <input type="text" name="vistoria.andar" /></label>
-          <label>Posição solar / face
-            <select name="vistoria.face">
-              <option>Norte</option><option>Sul</option><option>Leste</option><option>Oeste</option>
-              <option>Nordeste</option><option>Sudeste</option><option>Sudoeste</option><option>Noroeste</option>
-            </select>
+          <label class="field">
+            <span>Registro / CRECI do vistoriador</span>
+            <input type="text" data-bind="partes.registro" />
           </label>
-          <label class="col-2">Acabamentos e instalações
-            <textarea rows="2" name="vistoria.acabamentos">Piso cerâmico nas áreas molhadas e laminado nos demais ambientes; pintura látex; esquadrias de alumínio; instalações hidráulicas e elétricas em bom estado.</textarea>
-          </label>
-          <label class="col-2">Itens de lazer e infraestrutura do edifício
-            <textarea rows="2" name="vistoria.lazer">Portaria 24h, salão de festas, piscina, academia, playground.</textarea>
-          </label>
-          <label class="col-2">Equipamentos urbanos disponíveis
-            <textarea rows="2" name="vistoria.equipamentos">Energia elétrica, água tratada, esgoto sanitário, pavimentação, coleta de lixo, transporte coletivo, iluminação pública.</textarea>
+          <label class="field">
+            <span>Contato (telefone / e-mail)</span>
+            <input type="text" data-bind="partes.contato" />
           </label>
         </div>
-      </fieldset>
+      </section>
 
-      <!-- 4. MERCADO -->
-      <fieldset id="sec-mercado" class="card">
-        <legend>4. Diagnóstico do mercado imobiliário</legend>
-        <div class="grid grid-2">
-          <label>Liquidez
-            <select name="mercado.liquidez">
-              <option>Alta</option><option selected>Média</option><option>Baixa</option>
-            </select>
+      <!-- 3. Medidores e chaves -->
+      <section id="sec-medidores" class="card">
+        <h2>3. Medidores e chaves</h2>
+        <h3>Leituras dos medidores</h3>
+        <div class="grid">
+          <label class="field">
+            <span>Energia — nº do medidor</span>
+            <input type="text" data-bind="medidores.energiaNum" />
           </label>
-          <label>Comportamento
-            <select name="mercado.comportamento">
-              <option>Aquecido</option><option selected>Estável</option><option>Retraído</option>
-            </select>
+          <label class="field">
+            <span>Energia — leitura (kWh)</span>
+            <input type="text" data-bind="medidores.energiaLeitura" />
           </label>
-          <label>Relação oferta x demanda
-            <select name="mercado.ofertaDemanda">
-              <option>Demanda superior à oferta</option>
-              <option selected>Equilíbrio</option>
-              <option>Oferta superior à demanda</option>
-            </select>
+          <label class="field">
+            <span>Água — nº do medidor</span>
+            <input type="text" data-bind="medidores.aguaNum" />
           </label>
-          <label>Tendência de preços
-            <select name="mercado.tendencia">
-              <option>Alta</option><option selected>Estabilidade</option><option>Baixa</option>
-            </select>
+          <label class="field">
+            <span>Água — leitura (m³)</span>
+            <input type="text" data-bind="medidores.aguaLeitura" />
           </label>
-          <label class="col-2">Comentário sobre o mercado da região
-            <textarea rows="3" name="mercado.comentario">A região analisada apresenta boa oferta de imóveis residenciais, com infraestrutura urbana consolidada, próximos a comércios, escolas e transporte público.</textarea>
+          <label class="field">
+            <span>Gás — nº do medidor</span>
+            <input type="text" data-bind="medidores.gasNum" />
           </label>
-        </div>
-      </fieldset>
-
-      <!-- 5. MÉTODO E AMOSTRA -->
-      <fieldset id="sec-metodo" class="card">
-        <legend>5. Método utilizado e amostra de mercado</legend>
-        <div class="grid grid-2">
-          <label>Método
-            <select name="metodo.tipo">
-              <option value="MCDDM-Fatores" selected>Comparativo Direto de Dados de Mercado — Tratamento por Fatores</option>
-              <option value="MCDDM-Regressao">Comparativo Direto — Inferência Estatística (Regressão)</option>
-              <option value="Evolutivo">Método Evolutivo</option>
-              <option value="Involutivo">Método Involutivo</option>
-              <option value="Renda">Capitalização da Renda</option>
-              <option value="Custo">Quantificação do Custo</option>
-            </select>
-          </label>
-          <label>Variável de comparação
-            <select name="metodo.variavel">
-              <option value="privativa" selected>Preço por m² de área privativa</option>
-              <option value="construida">Preço por m² de área construída</option>
-              <option value="terreno">Preço por m² de área de terreno</option>
-            </select>
+          <label class="field">
+            <span>Gás — leitura</span>
+            <input type="text" data-bind="medidores.gasLeitura" />
           </label>
         </div>
 
-        <h3>Amostra (mínimo recomendado: 5 dados para Grau I; 12 para Grau II; 30 para Grau III por tratamento por fatores)</h3>
-        <div class="table-wrap">
-          <table id="tbl-amostra" class="datatable">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Endereço / referência</th>
-                <th>Fonte</th>
-                <th>Tipo</th>
-                <th>Área (m²)</th>
-                <th>Preço total (R$)</th>
-                <th>Oferta?</th>
-                <th>Loc.</th>
-                <th>Padrão</th>
-                <th>Cons.</th>
-                <th>Idade (anos)</th>
-                <th>Transp.</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+        <h3>Chaves e controles entregues</h3>
+        <div class="grid">
+          <label class="field">
+            <span>Chaves de porta</span>
+            <input type="number" min="0" step="1" data-bind="chaves.porta" />
+          </label>
+          <label class="field">
+            <span>Chaves de portão</span>
+            <input type="number" min="0" step="1" data-bind="chaves.portao" />
+          </label>
+          <label class="field">
+            <span>Controles remotos</span>
+            <input type="number" min="0" step="1" data-bind="chaves.controles" />
+          </label>
+          <label class="field">
+            <span>Cartões / tags de acesso</span>
+            <input type="number" min="0" step="1" data-bind="chaves.cartoes" />
+          </label>
+          <label class="field wide">
+            <span>Observações sobre chaves</span>
+            <input type="text" data-bind="chaves.obs" />
+          </label>
         </div>
-        <div class="row-actions">
-          <button id="btn-add-amostra" class="btn ghost" type="button">+ Adicionar dado</button>
-          <span class="hint">Loc./Padrão/Cons./Transp. são notas qualitativas usadas no fator. Defina os pesos abaixo.</span>
-        </div>
-      </fieldset>
+      </section>
 
-      <!-- 6. HOMOGENEIZAÇÃO -->
-      <fieldset id="sec-homogeneizacao" class="card">
-        <legend>6. Parâmetros de homogeneização</legend>
-        <p class="hint">
-          Os fatores aplicam-se ao preço unitário das amostras para torná-las comparáveis ao imóvel avaliando.
-          O resultado de cada amostra é multiplicado por: F<sub>oferta</sub> · F<sub>localização</sub> · F<sub>padrão</sub> · F<sub>conservação</sub> · F<sub>idade</sub> · F<sub>área</sub> · F<sub>transp</sub>.
+      <!-- 4. Ambientes -->
+      <section id="sec-ambientes" class="card">
+        <h2>4. Ambientes vistoriados</h2>
+        <p class="muted">
+          Cadastre cada cômodo e avalie a condição de seus itens. Use os modelos
+          rápidos para já criar os itens mais comuns de cada ambiente.
         </p>
-        <div class="grid grid-3">
-          <label>Fator oferta (amostras anunciadas)
-            <input type="number" step="0.01" name="fator.oferta" value="0.90" />
+        <div class="template-bar">
+          <span>Adicionar ambiente:</span>
+          <button type="button" class="btn small" data-template="Sala">Sala</button>
+          <button type="button" class="btn small" data-template="Cozinha">Cozinha</button>
+          <button type="button" class="btn small" data-template="Quarto">Quarto</button>
+          <button type="button" class="btn small" data-template="Banheiro">Banheiro</button>
+          <button type="button" class="btn small" data-template="Área de serviço">Área de serviço</button>
+          <button type="button" class="btn small" data-template="Varanda">Varanda</button>
+          <button type="button" class="btn small" data-template="Garagem">Garagem</button>
+          <button type="button" class="btn small" data-template="">Em branco</button>
+        </div>
+        <div id="ambientes-list" class="ambientes-list"></div>
+      </section>
+
+      <!-- 5. Inventário de móveis e eletrodomésticos -->
+      <section id="sec-inventario" class="card">
+        <h2>5. Móveis e eletrodomésticos</h2>
+        <p class="muted">
+          Inventário de itens do imóvel (mobiliado ou semimobiliado), com marca,
+          modelo e número de série para conferência na devolução.
+        </p>
+        <div class="template-bar">
+          <button type="button" class="btn small" id="btn-add-inv">+ adicionar item</button>
+        </div>
+        <div id="inventario-list" class="lista-tabela"></div>
+      </section>
+
+      <!-- 6. Manutenção e limpeza -->
+      <section id="sec-manutencao" class="card">
+        <h2>6. Manutenção e limpeza</h2>
+        <p class="muted">
+          Registre serviços de conservação, sua situação e responsáveis.
+        </p>
+        <div class="template-bar">
+          <button type="button" class="btn small" id="btn-add-manut">+ serviço</button>
+          <button type="button" class="btn small ghost" id="btn-manut-padrao">Carregar checklist padrão</button>
+        </div>
+        <div id="manutencao-list" class="lista-tabela"></div>
+      </section>
+
+      <!-- 7. Comparativo entrada × saída -->
+      <section id="sec-comparativo" class="card">
+        <h2>7. Comparativo entrada × saída</h2>
+        <p class="muted">
+          Carregue o JSON exportado da <strong>vistoria de entrada</strong> para
+          comparar, item a item, o que mudou nesta vistoria de saída. As fotos da
+          entrada não são armazenadas — apenas itens e condições.
+        </p>
+        <div class="template-bar">
+          <label class="btn small" for="file-baseline">Carregar vistoria de entrada (JSON)</label>
+          <input id="file-baseline" type="file" accept="application/json" hidden />
+          <button type="button" class="btn small ghost danger" id="btn-limpar-baseline" hidden>Remover referência</button>
+        </div>
+        <div id="comparativo-info" class="comparativo-info"></div>
+      </section>
+
+      <!-- 8. Observações -->
+      <section id="sec-observacoes" class="card">
+        <h2>8. Observações gerais e termos</h2>
+        <label class="field block">
+          <span>Observações gerais</span>
+          <textarea rows="4" data-bind="textos.observacoes"
+            placeholder="Descreva condições gerais, pendências, combinados etc."></textarea>
+        </label>
+        <label class="field block">
+          <span>Termo de responsabilidade</span>
+          <textarea rows="5" data-bind="textos.termo"></textarea>
+        </label>
+      </section>
+
+      <!-- 9. Assinaturas -->
+      <section id="sec-assinaturas" class="card">
+        <h2>9. Assinaturas</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Local de assinatura</span>
+            <input type="text" data-bind="assinaturas.local" placeholder="Curitiba / PR" />
           </label>
-          <label>Fator área — expoente n
-            <input type="number" step="0.01" name="fator.areaN" value="0.25" />
-            <small>F = (A<sub>amostra</sub>/A<sub>aval</sub>)<sup>n</sup></small>
-          </label>
-          <label>Idade — depreciação anual (%)
-            <input type="number" step="0.1" name="fator.depreciacaoAnual" value="1.0" />
-          </label>
-          <label>Localização — peso por nota (×)
-            <input type="number" step="0.01" name="fator.localizacao" value="0.05" />
-            <small>F = 1 + (nota<sub>aval</sub> − nota<sub>amostra</sub>) · peso</small>
-          </label>
-          <label>Padrão — peso por nota (×)
-            <input type="number" step="0.01" name="fator.padrao" value="0.05" />
-          </label>
-          <label>Conservação — peso por nota (×)
-            <input type="number" step="0.01" name="fator.conservacao" value="0.04" />
-          </label>
-          <label>Transposição (mercado) — peso por nota (×)
-            <input type="number" step="0.01" name="fator.transposicao" value="0.03" />
+          <label class="field">
+            <span>Data de assinatura</span>
+            <input type="date" data-bind="assinaturas.data" />
           </label>
         </div>
-
-        <h3>Imóvel avaliando — notas (escala 1 a 10)</h3>
-        <div class="grid grid-4">
-          <label>Localização <input type="number" min="1" max="10" step="1" name="aval.nota.localizacao" value="7" /></label>
-          <label>Padrão <input type="number" min="1" max="10" step="1" name="aval.nota.padrao" value="7" /></label>
-          <label>Conservação <input type="number" min="1" max="10" step="1" name="aval.nota.conservacao" value="8" /></label>
-          <label>Transposição <input type="number" min="1" max="10" step="1" name="aval.nota.transposicao" value="7" /></label>
-        </div>
-
-        <div class="row-actions">
-          <button id="btn-calcular" class="btn primary" type="button">Calcular avaliação</button>
-        </div>
-      </fieldset>
-
-      <!-- 7. RESULTADO -->
-      <fieldset id="sec-resultado" class="card">
-        <legend>7. Resultado e especificação da avaliação</legend>
-        <div id="resultado-vazio" class="hint">Preencha a amostra e clique em "Calcular avaliação" para ver os resultados.</div>
-        <div id="resultado" class="hidden">
-          <div class="grid grid-3">
-            <div class="kpi"><span>Média homogeneizada (R$/m²)</span><strong id="kpi-media">—</strong></div>
-            <div class="kpi"><span>Mediana (R$/m²)</span><strong id="kpi-mediana">—</strong></div>
-            <div class="kpi"><span>Desvio-padrão (R$/m²)</span><strong id="kpi-desvio">—</strong></div>
-            <div class="kpi"><span>Coef. variação</span><strong id="kpi-cv">—</strong></div>
-            <div class="kpi"><span>IC 80% — limite inferior</span><strong id="kpi-ic-inf">—</strong></div>
-            <div class="kpi"><span>IC 80% — limite superior</span><strong id="kpi-ic-sup">—</strong></div>
-            <div class="kpi"><span>Amplitude do IC 80%</span><strong id="kpi-ic-amp">—</strong></div>
-            <div class="kpi"><span>Outliers (Chauvenet)</span><strong id="kpi-outliers">—</strong></div>
-            <div class="kpi"><span>n efetivo</span><strong id="kpi-n">—</strong></div>
-          </div>
-
-          <div class="grid grid-2">
-            <div class="kpi big"><span>Valor unitário adotado (R$/m²)</span><strong id="kpi-valor-unit">—</strong></div>
-            <div class="kpi big"><span>Valor de avaliação (R$)</span><strong id="kpi-valor-total">—</strong></div>
-          </div>
-
-          <h3>Especificação da avaliação — NBR 14653-2</h3>
-          <div class="grid grid-2">
-            <div class="kpi"><span>Grau de fundamentação (tratamento por fatores)</span><strong id="kpi-grau-fund">—</strong></div>
-            <div class="kpi"><span>Grau de precisão</span><strong id="kpi-grau-prec">—</strong></div>
-          </div>
-          <div id="grau-detalhe" class="hint"></div>
-
-          <h3>Data de referência da avaliação</h3>
-          <div class="grid grid-2">
-            <label>Data de referência
-              <input type="date" name="laudo.dataReferencia" />
-            </label>
-            <label>Local e data do laudo
-              <input type="text" name="laudo.localData" placeholder="ex.: São Paulo, 20 de maio de 2026" />
-            </label>
-          </div>
-        </div>
-      </fieldset>
-
-      <!-- 8. RESPONSÁVEL -->
-      <fieldset id="sec-responsavel" class="card">
-        <legend>8. Responsável técnico</legend>
-        <div class="grid grid-2">
-          <label>Nome
-            <input type="text" name="responsavel.nome" />
-          </label>
-          <label>Formação / título
-            <input type="text" name="responsavel.formacao" placeholder="ex.: Engenheiro Civil, Corretor de Imóveis" />
-          </label>
-          <label>Registro profissional
-            <input type="text" name="responsavel.registro" placeholder="ex.: CREA-SP 123456 / CRECI-SP 12345" />
-          </label>
-          <label>CPF
-            <input type="text" name="responsavel.cpf" />
-          </label>
-          <label class="col-2">Endereço / contato
-            <input type="text" name="responsavel.contato" />
-          </label>
-        </div>
-      </fieldset>
-
-      <!-- 9. PREVIEW -->
-      <fieldset id="sec-preview" class="card">
-        <legend>9. Preview do laudo</legend>
-        <p class="hint">Clique em <strong>Gerar PDF / Imprimir</strong> no topo para salvar como PDF ou imprimir.</p>
-        <button id="btn-atualizar-preview" class="btn ghost" type="button">Atualizar preview</button>
-        <div id="preview" class="laudo-preview"></div>
-      </fieldset>
-    </section>
+        <p class="muted">
+          As linhas de assinatura do vistoriador, locador e locatário são geradas
+          automaticamente no PDF.
+        </p>
+      </section>
+    </form>
   </main>
 
-  <!-- Área de impressão (somente visível ao imprimir) -->
-  <article id="laudo-print" class="laudo-print only-print"></article>
+  <!-- Documento gerado (visível na impressão) -->
+  <div id="laudo" class="laudo print-only" aria-hidden="true"></div>
 
-  <footer class="rodape no-print">
-    <small>App de uso técnico — Avaliações Imobiliárias conforme ABNT NBR 14653-1 / NBR 14653-2. Os dados ficam salvos no seu navegador (localStorage).</small>
-  </footer>
-
-  <template id="tpl-amostra-row">
-    <tr>
-      <td class="idx"></td>
-      <td><input type="text" data-k="endereco" /></td>
-      <td>
-        <select data-k="fonte">
-          <option>Portal imobiliário</option>
-          <option>Imobiliária</option>
-          <option>Corretor</option>
-          <option>Proprietário</option>
-          <option>Cartório / ITBI</option>
-          <option>Pesquisa direta</option>
-        </select>
-      </td>
-      <td>
-        <select data-k="tipo">
-          <option>Apartamento</option><option>Casa</option><option>Terreno urbano</option>
-          <option>Sala comercial</option><option>Loja</option><option>Galpão</option>
-          <option>Cobertura</option><option>Sobrado</option>
-        </select>
-      </td>
-      <td><input type="number" step="0.01" data-k="area" /></td>
-      <td><input type="number" step="0.01" data-k="preco" /></td>
-      <td><input type="checkbox" data-k="oferta" checked /></td>
-      <td><input type="number" min="1" max="10" step="1" data-k="notaLocalizacao" value="7" /></td>
-      <td><input type="number" min="1" max="10" step="1" data-k="notaPadrao" value="7" /></td>
-      <td><input type="number" min="1" max="10" step="1" data-k="notaConservacao" value="7" /></td>
-      <td><input type="number" step="1" data-k="idade" value="5" /></td>
-      <td><input type="number" min="1" max="10" step="1" data-k="notaTransposicao" value="7" /></td>
-      <td><button type="button" class="btn ghost btn-remove">×</button></td>
-    </tr>
-  </template>
-
-  <script type="module" src="js/app.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/photos.js"></script>
+  <script src="js/templates.js"></script>
+  <script src="js/sample.js"></script>
+  <script src="js/report.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
