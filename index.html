@@ -306,6 +306,12 @@
   <!-- Documento gerado (visível na impressão) -->
   <div id="laudo" class="laudo print-only" aria-hidden="true"></div>
 
+  <!-- Lightbox para ampliar fotos -->
+  <div id="foto-modal" class="foto-modal no-print" aria-hidden="true">
+    <button type="button" class="foto-modal-close" id="foto-modal-close" title="Fechar (Esc)">✕</button>
+    <img id="foto-modal-img" src="" alt="Foto ampliada" />
+  </div>
+
   <script src="js/state.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/photos.js"></script>

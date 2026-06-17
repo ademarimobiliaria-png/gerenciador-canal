@@ -70,7 +70,12 @@
     const fotos =
       amb.fotos && amb.fotos.length
         ? `<div class="fotos">${amb.fotos
-            .map((src) => `<img src="${src}" alt="Foto de ${esc(amb.nome)}" />`)
+            .map(
+              (src) =>
+                `<a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="Foto de ${esc(
+                  amb.nome
+                )}" /></a>`
+            )
             .join('')}</div>`
         : '';
 

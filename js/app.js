@@ -77,7 +77,7 @@
           .map(
             (src, fi) => `
           <div class="foto-thumb">
-            <img src="${src}" alt="Foto ${fi + 1}" />
+            <img src="${src}" alt="Foto ${fi + 1}" title="Clique para ampliar" />
             <button type="button" class="del-foto" data-foto="${fi}" title="Remover foto">✕</button>
           </div>`
           )
@@ -193,6 +193,8 @@
         amb.fotos.splice(fi, 1);
         agendarSalvar();
         renderAmbientes();
+      } else if (t.tagName === 'IMG' && t.closest('.foto-thumb')) {
+        abrirFoto(t.src);
       }
     });
   }
@@ -435,6 +437,36 @@
     });
   }
 
+  /* ---------- lightbox de fotos ---------- */
+  function abrirFoto(src) {
+    const modal = $('#foto-modal');
+    const img = $('#foto-modal-img');
+    if (!modal || !img) return;
+    img.src = src;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function fecharFoto() {
+    const modal = $('#foto-modal');
+    if (!modal) return;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    $('#foto-modal-img').src = '';
+  }
+
+  function ligarLightbox() {
+    const modal = $('#foto-modal');
+    if (!modal) return;
+    // Fecha ao clicar no fundo ou no botão (mas não ao clicar na própria imagem).
+    modal.addEventListener('click', (ev) => {
+      if (ev.target.id !== 'foto-modal-img') fecharFoto();
+    });
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && modal.classList.contains('open')) fecharFoto();
+    });
+  }
+
   /* ---------- ações do topo ---------- */
   function ligarTopo() {
     $('#btn-novo').addEventListener('click', () => {
@@ -545,6 +577,7 @@
     ligarManutencao();
     renderComparativo();
     ligarComparativo();
+    ligarLightbox();
     ligarTopo();
     ligarNavegacao();
   }
