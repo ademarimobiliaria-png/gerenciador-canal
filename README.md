@@ -1,71 +1,69 @@
-# Laudo de Avaliação Imobiliária — ABNT NBR 14653
+# Vistoria de Imóveis
 
-App web para emissão de laudos de avaliação de imóveis urbanos seguindo as
-diretrizes da **ABNT NBR 14653-1** (procedimentos gerais) e da **NBR 14653-2**
-(imóveis urbanos), com foco no **Método Comparativo Direto de Dados de Mercado
-— Tratamento por Fatores (MCDDM)**.
+App web para registrar e emitir **laudos de vistoria de imóveis** (entrada,
+saída, periódica ou conferência), com avaliação ambiente por ambiente,
+fotos, leituras de medidores, controle de chaves e geração de PDF para
+impressão e assinatura.
+
+Funciona inteiramente no navegador, sem servidor: todos os dados ficam no
+`localStorage` da máquina do usuário.
 
 ## Como usar
 
 1. Abra `index.html` no navegador (Chrome, Edge ou Firefox recentes).
-2. Preencha as 8 seções do formulário (todos os campos são salvos
-   automaticamente no `localStorage` do navegador).
-3. Em **5. Método e amostra**, cadastre os dados de mercado utilizados.
-4. Em **6. Homogeneização**, ajuste os pesos dos fatores conforme a pesquisa.
-5. Clique em **Calcular avaliação** para ver média, IC 80 %, grau de
-   fundamentação e grau de precisão (NBR 14653-2).
-6. Clique em **Gerar PDF / Imprimir** no topo — o navegador abrirá a caixa de
-   impressão. Escolha “Salvar como PDF” para gerar o laudo completo em PDF.
+2. Preencha as seções do formulário — tudo é salvo automaticamente.
+3. Em **4. Ambientes**, use os botões de modelo rápido (Sala, Cozinha,
+   Quarto, Banheiro…) para já criar o cômodo com seus itens mais comuns,
+   ou crie um ambiente **em branco**.
+4. Para cada item, escolha a **condição** (Novo, Ótimo, Bom, Regular, Ruim,
+   Danificado, N/A) e adicione observações. Anexe **fotos** por ambiente —
+   elas são redimensionadas automaticamente antes de serem salvas.
+5. Clique em **Gerar PDF / Imprimir** no topo e escolha “Salvar como PDF”
+   na caixa de impressão do navegador.
 
-Há um botão **Carregar exemplo** que preenche o app com um caso de
-apartamento residencial em Curitiba, útil para conhecer o fluxo.
+Use **Carregar exemplo** para ver um caso preenchido (vistoria de entrada de
+um apartamento em Curitiba).
 
 ## O que entra no laudo (PDF / impressão)
 
-O laudo gerado contém, em todas as páginas, somente o conteúdo técnico
-(o topbar e os controles do app são suprimidos via `@media print`):
+A interface do app é suprimida na impressão (via `@media print`); o
+documento gerado contém:
 
-1. **Capa** — identificação do imóvel, solicitante, finalidade e data de
-   referência.
-2. **Solicitante e finalidade** — pressupostos, ressalvas e fatores
-   limitantes.
-3. **Identificação e caracterização do imóvel** + vistoria detalhada.
-4. **Diagnóstico do mercado imobiliário**.
-5. **Método, amostra e tratamento** — tabela completa com valor unitário
-   bruto, fator total e valor unitário homogeneizado de cada amostra,
-   indicando outliers saneados pelo critério de Chauvenet.
-6. **Tratamento estatístico** — média, mediana, desvio-padrão, CV,
-   intervalo de confiança 80 % e amplitude do IC.
-7. **Resultado da avaliação** — valor unitário e valor total, com a
-   especificação (grau de fundamentação e grau de precisão).
-8. **Encerramento** com local, data e assinatura do responsável técnico.
+1. **Capa** — tipo de vistoria, finalidade, endereço e data de referência.
+2. **Identificação** do imóvel (tipo, ocupação, área, endereço).
+3. **Partes envolvidas** — locador, locatário, imobiliária e vistoriador.
+4. **Medidores e chaves** — leituras de energia, água e gás e contagem de
+   chaves/controles entregues.
+5. **Ambientes vistoriados** — tabela por cômodo (item, condição,
+   observações) com selo colorido por condição e galeria de fotos, além de
+   um resumo com a contagem de itens por condição.
+6. **Observações gerais** e **termo de responsabilidade**.
+7. **Assinaturas** do vistoriador, locador e locatário.
 
 ## Estrutura
 
 ```
-index.html               Formulário e estrutura do app
-css/styles.css           Estilo da interface
-css/print.css            Layout do PDF / impressão (A4, margens, tipografia serifa)
-js/app.js                Controlador principal (formulário, persistência, fluxo)
-js/statistics.js         Média, mediana, desvio, Chauvenet, IC 80 % (t-Student)
-js/nbr14653.js           Enquadramento NBR 14653-2 (fundamentação e precisão)
-js/homogeneizacao.js     Cálculo dos fatores de homogeneização (MCDDM)
-js/laudo.js              Renderização do laudo HTML (preview + impressão)
+index.html             Formulário e estrutura do app
+css/styles.css         Estilo da interface
+css/print.css          Layout do PDF / impressão (A4, tabelas, assinaturas)
+js/state.js            Modelo de dados, condições e utilitários de estado
+js/storage.js          Persistência no localStorage
+js/photos.js           Leitura e compressão (redimensionamento) das fotos
+js/templates.js        Modelos de itens por tipo de ambiente
+js/sample.js           Caso de exemplo
+js/report.js           Renderização do laudo HTML para impressão
+js/app.js              Controlador principal (formulário, ambientes, fluxo)
 ```
 
-## Limitações
+## Exportar / importar
 
-- A versão atual contempla apenas o **tratamento por fatores** do MCDDM.
-  A inferência estatística por regressão e os métodos evolutivo, involutivo,
-  renda e custo podem ser selecionados no formulário, mas o cálculo
-  automático é feito somente para o tratamento por fatores.
-- A classificação do grau de fundamentação considera os itens objetivos
-  (quantidade de dados e amplitude do IC). Os itens subjetivos
-  (caracterização, identificação dos dados e apresentação dos cálculos)
-  são considerados atendidos por o app oferecer formulário completo —
-  o avaliador permanece responsável pela aderência integral à norma.
+- **Exportar JSON** salva todo o estado (incluindo fotos) em um arquivo,
+  útil para backup ou para continuar a vistoria em outro dispositivo.
+- **Importar JSON** restaura um arquivo exportado anteriormente.
 
 ## Privacidade
 
-Os dados ficam exclusivamente no navegador do usuário (`localStorage`).
-Nenhuma informação é enviada para servidores externos.
+Os dados (textos e fotos) ficam exclusivamente no navegador do usuário
+(`localStorage`). Nenhuma informação é enviada para servidores externos.
+Como as fotos ocupam espaço, vistorias muito extensas podem atingir o
+limite do `localStorage` — nesse caso, exporte o JSON regularmente.
