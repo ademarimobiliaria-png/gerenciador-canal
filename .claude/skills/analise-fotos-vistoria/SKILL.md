@@ -120,5 +120,6 @@ Esta skill deve evoluir a cada vez que for usada. Ao terminar a análise:
 | 2026-11-18 | Lotes grandes (>10 fotos) geram resposta longa → oferecer modo curto (só tabela + fotos a refazer) | Pendente de aplicar |
 | 2026-11-18 | Tipo de vistoria não informado muda o foco da análise → perguntar primeiro (entrada: estado inicial; saída: limpeza e danos) | Pendente de aplicar |
 | 2026-11-18 | Falhas recorrentes do vistoriador: dedo/pé/sombra no quadro, desfoque em close elétrico, rótulos ilegíveis em quadro de disjuntores | Pendente de aplicar |
+| 2026-11-18 | Integrada ao app web (`js/photos.js`): pré-triagem automática de qualidade e checklist por ambiente. Limiar de nitidez calibrado com 13 fotos reais (variância do laplaciano < 120 a 320 px; paredes lisas podem dar falso alerta) | Aplicado |
 
 Itens "Pendente de aplicar" devem ser incorporados às seções acima no próximo uso da skill.

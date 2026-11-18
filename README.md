@@ -83,3 +83,15 @@ Os dados (textos e fotos) ficam exclusivamente no navegador do usuário
 (`localStorage`). Nenhuma informação é enviada para servidores externos.
 Como as fotos ocupam espaço, vistorias muito extensas podem atingir o
 limite do `localStorage` — nesse caso, exporte o JSON regularmente.
+
+## Qualidade das fotos (skill `analise-fotos-vistoria`)
+
+Ao anexar fotos em um ambiente, o app faz uma **análise automática de
+qualidade no próprio navegador** (nada é enviado para fora) e marca com ⚠ as
+fotos com: resolução baixa, escuras, claras demais, áreas estouradas
+(contraluz/flash) ou possível desfoque. Cada ambiente também traz um
+**checklist de registro fotográfico** e avisa quando há poucas fotos.
+
+São alertas heurísticos: a decisão de refazer é do vistoriador. Para uma
+análise completa (descrição, identificação, danos, legendas), use a skill
+`.claude/skills/analise-fotos-vistoria`.

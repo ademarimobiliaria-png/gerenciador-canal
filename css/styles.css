@@ -195,6 +195,24 @@ textarea { resize: vertical; }
   line-height: 1;
 }
 
+.foto-thumb.com-aviso img { border-color: #d97706; border-width: 2px; }
+.foto-thumb .foto-aviso {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  background: #d97706;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  padding: 0 4px;
+  cursor: help;
+}
+.foto-cobertura.warn, .foto-avisos { color: #b45309; font-size: 0.85rem; margin: 0.4rem 0 0; }
+.foto-avisos { padding-left: 1.1rem; }
+.foto-checklist { margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted, #555); }
+.foto-checklist summary { cursor: pointer; }
+.foto-checklist ul { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+
 /* ---------- inventário e manutenção ---------- */
 .lista-tabela { display: flex; flex-direction: column; gap: 0.4rem; }
 .inv-row {

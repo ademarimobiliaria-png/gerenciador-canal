@@ -73,15 +73,31 @@
           )
           .join('');
 
+        const avisosAmb = amb.fotosAvisos || [];
         const fotosHtml = (amb.fotos || [])
-          .map(
-            (src, fi) => `
-          <div class="foto-thumb">
+          .map((src, fi) => {
+            const av = avisosAmb[fi] || [];
+            const marca = av.length
+              ? `<span class="foto-aviso" title="${attr(av.join(' '))}">⚠</span>`
+              : '';
+            return `
+          <div class="foto-thumb${av.length ? ' com-aviso' : ''}">
             <img src="${src}" alt="Foto ${fi + 1}" />
+            ${marca}
             <button type="button" class="del-foto" data-foto="${fi}" title="Remover foto">✕</button>
-          </div>`
-          )
+          </div>`;
+          })
           .join('');
+        const listaAvisos = (amb.fotos || [])
+          .map((_, fi) => ((avisosAmb[fi] || []).length ? `<li><strong>Foto ${fi + 1}:</strong> ${avisosAmb[fi].join(' ')}</li>` : ''))
+          .join('');
+        const qtdFotos = (amb.fotos || []).length;
+        const avisoCobertura =
+          qtdFotos === 0
+            ? '<p class="foto-cobertura warn">Nenhuma foto neste ambiente — registre ao menos 1 foto geral + closes dos danos.</p>'
+            : qtdFotos === 1
+            ? '<p class="foto-cobertura warn">Apenas 1 foto — inclua também closes dos danos e itens principais.</p>'
+            : '';
 
         return `
         <div class="ambiente" data-amb="${amb.id}">
@@ -101,6 +117,19 @@
               <input type="file" class="foto-input" accept="image/*" multiple hidden />
             </label>
             <div class="fotos-grid">${fotosHtml}</div>
+            ${avisoCobertura}
+            ${listaAvisos ? `<ul class="foto-avisos">${listaAvisos}</ul>` : ''}
+            <details class="foto-checklist">
+              <summary>Checklist de fotos deste ambiente</summary>
+              <ul>
+                <li>1 foto geral do ambiente (visão de canto/diagonal) antes dos closes.</li>
+                <li>Teto, piso, paredes, esquadrias (portas/janelas), tomadas/interruptores e louças/metais.</li>
+                <li>Cada dano: foto-guia (onde fica) + close com trena/régua/moeda de escala.</li>
+                <li>Luz acesa e sem contraluz; sem flash em espelho/vidro/azulejo; luz lateral para trincas.</li>
+                <li>Foco travado, lente limpa, sem dedo/pé/sombra; mesma sequência e ângulos na entrada e na saída.</li>
+                <li>Não edite o conteúdo da foto (sem apagar manchas, sem filtros).</li>
+              </ul>
+            </details>
           </div>
         </div>`;
       })
@@ -191,6 +220,7 @@
       } else if (t.classList.contains('del-foto') && amb) {
         const fi = parseInt(t.getAttribute('data-foto'), 10);
         amb.fotos.splice(fi, 1);
+        if (amb.fotosAvisos) amb.fotosAvisos.splice(fi, 1);
         agendarSalvar();
         renderAmbientes();
       }
@@ -214,13 +244,18 @@
     if (!files.length) return;
     Promise.all(
       files.map((f) =>
-        V.photos.processar(f).catch((err) => {
+        V.photos.processarComAnalise(f).catch((err) => {
           console.warn('Foto ignorada:', err);
           return null;
         })
       )
-    ).then((urls) => {
-      amb.fotos = amb.fotos.concat(urls.filter(Boolean));
+    ).then((res) => {
+      const ok = res.filter(Boolean);
+      // mantém fotosAvisos alinhado a fotos (dados antigos podem não ter avisos)
+      const avisos = (amb.fotosAvisos || []).slice(0, amb.fotos.length);
+      while (avisos.length < amb.fotos.length) avisos.push([]);
+      amb.fotos = amb.fotos.concat(ok.map((r) => r.src));
+      amb.fotosAvisos = avisos.concat(ok.map((r) => r.avisos));
       agendarSalvar();
       renderAmbientes();
     });
