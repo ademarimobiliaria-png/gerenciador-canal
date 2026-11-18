@@ -99,3 +99,26 @@ Sempre termine com 3–5 recomendações **específicas ao que foi observado** (
 - Se forem muitas fotos (>10), entregue primeiro o **resumo + tabela** e depois o detalhamento por foto.
 - Se o usuário quiser o resultado em laudo formal, sugira usar a skill `vistoria-imoveis` para montar o documento final com as legendas geradas aqui.
 - Se o usuário pedir, ofereça: legendas curtas para o laudo, lista de reparos para orçamento, ou checklist de refação para o vistoriador.
+
+## Aprimoramento contínuo (executar a cada uso)
+
+Esta skill deve evoluir a cada vez que for usada. Ao terminar a análise:
+
+1. **Revise o próprio resultado:** o que faltou, o que ficou confuso, que dúvida teve de ser respondida no meio, que tipo de foto/ambiente/dano não estava coberto pelos checklists acima.
+2. **Atualize este arquivo (`SKILL.md`)** com melhorias *gerais e reutilizáveis*: novos itens de checklist, novos problemas de qualidade, regras, formato de saída, perguntas iniciais. Edite de forma cirúrgica, sem apagar o que já funciona.
+3. **Registre no "Registro de aprendizados"** abaixo uma linha: data, o que foi aprendido, o que foi alterado.
+4. **Nunca grave dados do cliente ou do imóvel** (nomes, endereços, telefones, matrícula, placas) no arquivo: só aprendizados genéricos.
+5. **Faça commit** da alteração na branch de trabalho e avise o usuário, em uma linha, o que foi aprimorado.
+6. Se uma melhoria for incerta ou mudar muito o comportamento, **proponha ao usuário antes** de aplicar.
+
+### Registro de aprendizados
+
+| Data | Aprendizado | Situação |
+|---|---|---|
+| 2026-11-18 | Teste com 13 fotos: cômodos não identificados em várias fotos sem foto-guia → perguntar o cômodo ou pedir foto-guia | Pendente de aplicar |
+| 2026-11-18 | Placas de divulgação de terceiros e telefones em fachada → sinalizar para corte antes de anexar ao laudo | Pendente de aplicar |
+| 2026-11-18 | Lotes grandes (>10 fotos) geram resposta longa → oferecer modo curto (só tabela + fotos a refazer) | Pendente de aplicar |
+| 2026-11-18 | Tipo de vistoria não informado muda o foco da análise → perguntar primeiro (entrada: estado inicial; saída: limpeza e danos) | Pendente de aplicar |
+| 2026-11-18 | Falhas recorrentes do vistoriador: dedo/pé/sombra no quadro, desfoque em close elétrico, rótulos ilegíveis em quadro de disjuntores | Pendente de aplicar |
+
+Itens "Pendente de aplicar" devem ser incorporados às seções acima no próximo uso da skill.
